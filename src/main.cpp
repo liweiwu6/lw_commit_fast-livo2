@@ -7,6 +7,6 @@ int main(int argc, char **argv)
   image_transport::ImageTransport it(nh);
   LIVMapper mapper(nh);
   mapper.initializeSubscribersAndPublishers(nh, it);//初始化订阅器和发布器
-  mapper.run();
+  mapper.run();//运行主循环
   return 0;
 }
