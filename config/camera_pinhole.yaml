@@ -1,12 +1,69 @@
+# Retail_Street, CBD_Building_01
+# cam_model: Pinhole
+# cam_width: 1280
+# cam_height: 1024
+# scale: 0.5
+# cam_fx: 1293.56944
+# cam_fy: 1293.3155
+# cam_cx: 626.91359
+# cam_cy: 522.799224
+# cam_d0: -0.076160
+# cam_d1: 0.123001
+# cam_d2: -0.00113
+# cam_d3: 0.000251
+
+####### Red_Sculpture
+# cam_model: Pinhole
+# cam_width: 1280
+# cam_height: 1024
+# scale: 0.5
+# cam_fx: 1294.7265716372897
+# cam_fy: 1294.8678078910468
+# cam_cx: 626.663267153558
+# cam_cy: 531.0334324363173
+# cam_d0: -0.07592763180373921
+# cam_d1: 0.12857252741674535
+# cam_d2: 0.0002726821691221157
+# cam_d3: 0.0002504335037343933
+
+# HKU_Campus, CBD_Building_02
+# cam_model: Pinhole
+# cam_width: 1280
+# cam_height: 1024
+# scale: 0.5
+# cam_fx: 1176.2874292149932
+# cam_fy: 1176.21585445307
+# cam_cx: 592.1187382755453
+# cam_cy: 509.0864309628322
+# cam_d0: -0.13218037625958456
+# cam_d1: 0.15360732717073536
+# cam_d2: 0.00036918417348059815
+# cam_d3: -0.00031715324469463964
+
+# SYSU_01, HIT_Graffiti_Wall_01
+# cam_model: Pinhole
+# cam_width: 1280
+# cam_height: 1024
+# scale: 0.5
+# cam_fx: 1311.89517127580
+# cam_fy: 1311.36488586115
+# cam_cx: 656.523841857393
+# cam_cy: 504.136322840350
+# cam_d0: -0.0780830982640722
+# cam_d1: 0.146382433670493
+# cam_d2: -0.00110111633050301
+# cam_d3: -0.00110752991013068
+
+#ours
 cam_model: Pinhole
 cam_width: 1280
 cam_height: 1024
 scale: 0.5
-cam_fx: 1293.56944
-cam_fy: 1293.3155
-cam_cx: 626.91359
-cam_cy: 522.799224
-cam_d0: -0.076160
-cam_d1: 0.123001
-cam_d2: -0.00113
-cam_d3: 0.000251
+cam_fx: 1410.431231
+cam_fy: 1403.397877
+cam_cx: 731.360949
+cam_cy: 496.798976
+cam_d0: -0.048612
+cam_d1: 0.169242
+cam_d2: -0.007548
+cam_d3: 0.006408

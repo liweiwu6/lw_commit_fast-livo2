@@ -87,13 +87,13 @@ void Preprocess::process(const sensor_msgs::PointCloud2::ConstPtr &msg, PointClo
   *pcl_out = pl_surf;
 }
 
-void Preprocess::avia_handler(const livox_ros_driver::CustomMsg::ConstPtr &msg)
+void Preprocess::avia_handler(const livox_ros_driver::CustomMsg::ConstPtr &msg)//livox点云处理
 {
-  pl_surf.clear();
-  pl_corn.clear();
-  pl_full.clear();
+  pl_surf.clear();//面点
+  pl_corn.clear();//角点
+  pl_full.clear();//全部点
   double t1 = omp_get_wtime();
-  int plsize = msg->point_num;
+  int plsize = msg->point_num;//点云数量
   printf("[ Preprocess ] Input point number: %d \n", plsize);
   // printf("point_filter_num: %d\n", point_filter_num);
 
@@ -108,7 +108,7 @@ void Preprocess::avia_handler(const livox_ros_driver::CustomMsg::ConstPtr &msg)
   }
   uint valid_num = 0;
 
-  if (feature_enabled)
+  if (feature_enabled)//特征提取
   {
     for (uint i = 1; i < plsize; i++)
     {
@@ -156,11 +156,11 @@ void Preprocess::avia_handler(const livox_ros_driver::CustomMsg::ConstPtr &msg)
     time += omp_get_wtime() - t0;
     printf("Feature extraction time: %lf \n", time / count);
   }
-  else
+  else//计算每个点的偏移时间，过滤距离过近的点
   {
     for (uint i = 0; i < plsize; i++)
     {
-      if ((msg->points[i].line < N_SCANS)) // && ((msg->points[i].tag & 0x30) == 0x10))
+      if ((msg->points[i].line < N_SCANS)) // && ((msg->points[i].tag & 0x30) == 0x10))//检验线id
       {
         valid_num++;
 
@@ -168,9 +168,9 @@ void Preprocess::avia_handler(const livox_ros_driver::CustomMsg::ConstPtr &msg)
         pl_full[i].y = msg->points[i].y;
         pl_full[i].z = msg->points[i].z;
         pl_full[i].intensity = msg->points[i].reflectivity;
-        pl_full[i].curvature = msg->points[i].offset_time / float(1000000); // use curvature as time of each laser points
+        pl_full[i].curvature = msg->points[i].offset_time / float(1000000); // use curvature as time of each laser points 使用曲率作为每个激光点的时间
 
-        if (i == 0)
+        if (i == 0)//初始化第一个点
           pl_full[i].curvature = fabs(pl_full[i].curvature) < 1.0 ? pl_full[i].curvature : 0.0;
         else
         {
@@ -180,11 +180,16 @@ void Preprocess::avia_handler(const livox_ros_driver::CustomMsg::ConstPtr &msg)
                                      : pl_full[i - 1].curvature + 0.004166667f; // float(100/24000)
         }
 
-        if (valid_num % point_filter_num == 0)
+        if (valid_num % point_filter_num == 0)//设置过滤
         {
-          if (pl_full[i].x * pl_full[i].x + pl_full[i].y * pl_full[i].y + pl_full[i].z * pl_full[i].z >= blind_sqr)
+          if (pl_full[i].x * pl_full[i].x + pl_full[i].y * pl_full[i].y + pl_full[i].z * pl_full[i].z >= blind_sqr)//检测点的距离
           {
-            pl_surf.push_back(pl_full[i]);
+            // printf("msg->points[%d].tag = %d \n",i,msg->points[i].tag);
+            if( msg->points[i].reflectivity > 5 ) // * 去除lidar产生的镜面反射
+            {
+              pl_surf.push_back(pl_full[i]);
+            }
+                
             // if (i % 100 == 0 || i == 0) printf("pl_full[i].curvature: %f \n",
             // pl_full[i].curvature);
           }

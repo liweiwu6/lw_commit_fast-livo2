@@ -7,79 +7,106 @@ common:
   ros_driver_bug_fix: false
 
 extrin_calib:
-  extrinsic_T: [0.04165, 0.02326, -0.0284]
-  extrinsic_R: [1, 0, 0, 0, 1, 0, 0, 0, 1]
-  Rcl: [0.00610193,-0.999863,-0.0154172,
-        -0.00615449,0.0153796,-0.999863,
-        0.999962,0.00619598,-0.0060598] 
-  Pcl: [0.0194384, 0.104689,-0.0251952]
+  extrinsic_T: [0.04165, 0.02326, -0.0284] #imu lidar 外参 位移
+  extrinsic_R: [1, 0, 0, 0, 1, 0, 0, 0, 1] #imu lidar 外参 旋转
+
+###### Retail_Street, CBD_Building_01 
+  # Rcl: [0.00610193,-0.999863,-0.0154172,
+  #       -0.00615449,0.0153796,-0.999863,
+  #       0.999962,0.00619598,-0.0060598] 
+  # Pcl: [0.0194384, 0.104689,-0.0251952]
+
+###### Red_Sculpture
+  # Rcl: [-0.00668,-0.99965,-0.02543,
+  #       -0.01151,0.02550,-0.99961,
+  #       0.99991,-0.00638,-0.01168]
+  # Pcl: [-0.00077, 0.04809, -0.00133]
+
+# ##### HKU_Campus, CBD_Building_02 
+  # Rcl: [-0.00200, -0.99975, -0.02211,
+  #       -0.00366, 0.02212, -0.99975,
+  #       0.99999, -0.00192, -0.00371]
+  # Pcl: [0.00260, 0.05057, -0.00587]
+
+##### SYSU_01, HIT_Graffiti_Wall_01
+  # Rcl: [-0.0036250, -0.9998907, -0.0143360,
+  #      0.0075568,  0.0143083, -0.9998690,
+  #      0.9999649, -0.0037329,  0.0075041]
+  # Pcl: [0.00549469, 0.0712101, 0.0322054]
+
+#ours
+  Rcl: [-0.0102871,-0.999676,-0.023284,
+        0.0251796,0.0230188,-0.999418,
+        0.99963,-0.0108674,0.0249346] 
+  Pcl: [-0.0217138,-0.0622474,0.0210581]
+
 
 time_offset: 
   imu_time_offset: 0.0
   img_time_offset: 0.1
-  exposure_time_init: 0.0
+  exposure_time_init: 0.0 #初始化曝光时间
 
 preprocess:
-  point_filter_num: 1
-  filter_size_surf: 0.1
+  point_filter_num: 1 #点云过滤数量
+  filter_size_surf: 0.1 #滤波器大小
   lidar_type: 1 # Livox Avia LiDAR
-  scan_line: 6
-  blind: 0.8
+  scan_line: 6 #扫描线数
+  blind: 0.8 #盲区
 
 vio:
-  max_iterations: 5
-  outlier_threshold: 1000 # 78 100 156 #100 200 500 700 infinite
-  img_point_cov: 100 # 100 1000 
-  patch_size: 8
-  patch_pyrimid_level: 4
-  normal_en: true
-  raycast_en: false
-  inverse_composition_en: false
-  exposure_estimate_en: true
-  inv_expo_cov: 0.1
+  max_iterations: 5 #最大迭代次数
+  outlier_threshold: 1000 # 78 100 156 #100 200 500 700 infinite  #离群值阈值
+  img_point_cov: 100 # 100 1000  #图像点协方差
+  patch_size: 8 #补丁大小
+  patch_pyrimid_level: 4 #补丁金字塔层数
+  normal_en: true #法向量
+  raycast_en: false #射线投影
+  inverse_composition_en: false #逆向组合
+  exposure_estimate_en: true #曝光估计
+  inv_expo_cov: 0.1 #曝光协方差
 
 imu:
   imu_en: true
-  imu_int_frame: 30
-  acc_cov: 0.5 # 0.2
-  gyr_cov: 0.3 # 0.5
-  b_acc_cov: 0.0001 # 0.1
-  b_gyr_cov: 0.0001 # 0.1
+  imu_int_frame: 30 #imu积分帧数
+  acc_cov: 0.5 # 0.2 加速度协方差
+  gyr_cov: 0.3 # 0.5 陀螺仪协方差
+  b_acc_cov: 0.0001 # 0.1 加速度bias协方差
+  b_gyr_cov: 0.0001 # 0.1 陀螺仪bias协方差
 
 lio:
-  max_iterations: 5
-  dept_err: 0.02
-  beam_err: 0.05
-  min_eigen_value: 0.0025 # 0.005
-  voxel_size: 0.5
-  max_layer: 2
-  max_points_num: 50
-  layer_init_num: [5, 5, 5, 5, 5]
+  max_iterations: 5 #最大迭代次数
+  dept_err: 0.02 #深度误差
+  beam_err: 0.05 #光束误差
+  min_eigen_value: 0.0025 # 0.005 最小特征值
+  voxel_size: 0.5 #体素大小
+  max_layer: 2 #最大层数
+  max_points_num: 50 #最大点数
+  layer_init_num: [5, 5, 5, 5, 5] #每层初始化点数
 
 local_map:  
-  map_sliding_en: false
-  half_map_size: 100
-  sliding_thresh: 8
+  map_sliding_en: false #地图滑动调整
+  half_map_size: 100 #半地图大小
+  sliding_thresh: 8 #滑动阈值
 
 uav:
-  imu_rate_odom: false
-  gravity_align_en: false
+  imu_rate_odom: false #imu速率里程计
+  gravity_align_en: false #重力对齐
 
 publish:
-  dense_map_en: true
-  pub_effect_point_en: false 
-  pub_plane_en: false
-  pub_scan_num: 1
-  blind_rgb_points: 0.0
+  dense_map_en: true #稠密地图
+  pub_effect_point_en: false #有效点云
+  pub_plane_en: false #平面
+  pub_scan_num: 1 #发布扫描线数
+  blind_rgb_points: 0.0 #盲区RGB点数
 
 evo:
   seq_name: "CBD_Building_01"
-  pose_output_en: false
+  pose_output_en: false #输出位姿
 
 pcd_save:
-  pcd_save_en: false
+  pcd_save_en: true #false 
   colmap_output_en: false # need to set interval = -1
-  filter_size_pcd: 0.15
+  filter_size_pcd: 0.5
   interval: -1
   # how many LiDAR frames saved in each pcd file;
   # -1 : all frames will be saved in ONE pcd file, may lead to memory crash when having too much frames.

@@ -32,14 +32,14 @@ void VIOManager::setImuToLidarExtrinsic(const V3D &transl, const M3D &rot)
   Rli = rot.transpose();
 }
 
-void VIOManager::setLidarToCameraExtrinsic(vector<double> &R, vector<double> &P)
+void VIOManager::setLidarToCameraExtrinsic(vector<double> &R, vector<double> &P)//设置lidar到相机的外参
 {
   Rcl << MAT_FROM_ARRAY(R);
   Pcl << VEC_FROM_ARRAY(P);
 }
 
 void VIOManager::initializeVIO()
-{
+{ 
   visual_submap = new SubSparseMap;
 
   fx = cam->fx();
@@ -54,20 +54,20 @@ void VIOManager::initializeVIO()
   height = cam->height();
 
   printf("width: %d, height: %d, scale: %f\n", width, height, image_resize_factor);
-  Rci = Rcl * Rli;
-  Pci = Rcl * Pli + Pcl;
+  Rci = Rcl * Rli;//IMU到相机的旋转矩阵
+  Pci = Rcl * Pli + Pcl;//IMU到相机的平移矩阵
 
   V3D Pic;
   M3D tmp;
-  Jdphi_dR = Rci;
+  Jdphi_dR = Rci;//雅可比矩阵？？
   Pic = -Rci.transpose() * Pci;
   tmp << SKEW_SYM_MATRX(Pic);
   Jdp_dR = -Rci * tmp;
-
+///////////////////////计算网格的行数和列数
   if (grid_size > 10)
   {
-    grid_n_width = ceil(static_cast<double>(width / grid_size));
-    grid_n_height = ceil(static_cast<double>(height / grid_size));
+    grid_n_width = ceil(static_cast<double>(width / grid_size));//图像宽度除以网格大小
+    grid_n_height = ceil(static_cast<double>(height / grid_size));//图像高度除以网格大小
   }
   else
   {
@@ -75,9 +75,9 @@ void VIOManager::initializeVIO()
     grid_n_height = ceil(static_cast<double>(height / grid_size));
     grid_n_width = ceil(static_cast<double>(width / grid_size));
   }
-  length = grid_n_width * grid_n_height;
+  length = grid_n_width * grid_n_height;//网格的长度（数量）
 
-  if(raycast_en)
+  if(raycast_en)//光线投射模块，默认未开启
   {
     // cv::Mat img_test = cv::Mat::zeros(height, width, CV_8UC1);
     // uchar* it = (uchar*)img_test.data;
@@ -151,7 +151,7 @@ void VIOManager::initializeVIO()
   patch_size_half = static_cast<int>(patch_size / 2);
   patch_buffer.resize(patch_size_total);
   warp_len = patch_size_total * patch_pyrimid_level;
-  border = (patch_size_half + 1) * (1 << patch_pyrimid_level);
+  border = (patch_size_half + 1) * (1 << patch_pyrimid_level);//定义图像的边缘保护区域大小
 
   retrieve_voxel_points.reserve(length);
   append_voxel_points.reserve(length);
@@ -159,21 +159,21 @@ void VIOManager::initializeVIO()
   sub_feat_map.clear();
 }
 
-void VIOManager::resetGrid()
+void VIOManager::resetGrid()//重置网格
 {
-  fill(grid_num.begin(), grid_num.end(), TYPE_UNKNOWN);
-  fill(map_index.begin(), map_index.end(), 0);
-  fill(map_dist.begin(), map_dist.end(), 10000.0f);
-  fill(update_flag.begin(), update_flag.end(), 0);
-  fill(scan_value.begin(), scan_value.end(), 0.0f);
+  fill(grid_num.begin(), grid_num.end(), TYPE_UNKNOWN);//填充网格
+  fill(map_index.begin(), map_index.end(), 0);//填充地图索引
+  fill(map_dist.begin(), map_dist.end(), 10000.0f);//填充地图距离
+  fill(update_flag.begin(), update_flag.end(), 0);//填充更新标志
+  fill(scan_value.begin(), scan_value.end(), 0.0f);//填充扫描值
 
-  retrieve_voxel_points.clear();
-  retrieve_voxel_points.resize(length);
+  retrieve_voxel_points.clear();//被检索的体素点清空
+  retrieve_voxel_points.resize(length);//重置检索体素点
 
-  append_voxel_points.clear();
-  append_voxel_points.resize(length);
+  append_voxel_points.clear();//追加体素点清空
+  append_voxel_points.resize(length);//重置追加体素点
 
-  total_points = 0;
+  total_points = 0;//总点数清零
 }
 
 // void VIOManager::resetRvizDisplay()
@@ -348,7 +348,7 @@ double VIOManager::calculateNCC(float *ref_patch, float *cur_patch, int patch_si
   }
   return numerator / sqrt(demoniator1 * demoniator2 + 1e-10);
 }
-
+/////////////////////从视觉稀疏地图中检索特征点////////////////////////
 void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &pg, const unordered_map<VOXEL_LOCATION, VoxelOctoTree *> &plane_map)
 {
   if (feat_map.size() <= 0) return;
@@ -359,24 +359,24 @@ void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &
   // downSizeFilter.filter(*pg_down);
 
   // resetRvizDisplay();
-  visual_submap->reset();
+  visual_submap->reset();//重置视觉子地图
 
-  // Controls whether to include the visual submap from the previous frame.
-  sub_feat_map.clear();
+  // Controls whether to include the visual submap from the previous frame.//控制是否包括上一帧的视觉子地图。
+  sub_feat_map.clear();//清空子特征地图
 
-  float voxel_size = 0.5;
+  float voxel_size = 0.5;//体素大小
 
-  if (!normal_en) warp_map.clear();
+  if (!normal_en) warp_map.clear();//法向量标志位关闭，清空warp_map  todo
 
-  cv::Mat depth_img = cv::Mat::zeros(height, width, CV_32FC1);
-  float *it = (float *)depth_img.data;
+  cv::Mat depth_img = cv::Mat::zeros(height, width, CV_32FC1);//创建一个深度图,所有像素值为0,类型为单通道32位浮点型
+  float *it = (float *)depth_img.data;//获取深度图数据指针
 
   // float it[height * width] = {0.0};
 
   // double t_insert, t_depth, t_position;
   // t_insert=t_depth=t_position=0;
 
-  int loc_xyz[3];
+  int loc_xyz[3];//位置坐标
 
   // printf("A0. initial depthmap: %.6lf \n", omp_get_wtime() - ts0);
   // double ts1 = omp_get_wtime();
@@ -387,41 +387,41 @@ void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &
   {
     // double t0 = omp_get_wtime();
 
-    V3D pt_w = pg[i].point_w;
+    V3D pt_w = pg[i].point_w;//世界坐标系下的点
 
-    for (int j = 0; j < 3; j++)
+    for (int j = 0; j < 3; j++)//将其世界坐标除以一个体素大小（voxel_size）后使用 floor 函数取整，从而将连续的空间分割到离散的网格中
     {
       loc_xyz[j] = floor(pt_w[j] / voxel_size);
-      if (loc_xyz[j] < 0) { loc_xyz[j] -= 1.0; }
+      if (loc_xyz[j] < 0) { loc_xyz[j] -= 1.0; }//计算结果为负数，还会向下调整 1 个单位，以确保负方向上的分割正确无误
     }
-    VOXEL_LOCATION position(loc_xyz[0], loc_xyz[1], loc_xyz[2]);
+    VOXEL_LOCATION position(loc_xyz[0], loc_xyz[1], loc_xyz[2]);//体素位置
 
     // t_position += omp_get_wtime()-t0;
     // double t1 = omp_get_wtime();
 
-    auto iter = sub_feat_map.find(position);
-    if (iter == sub_feat_map.end()) { sub_feat_map[position] = 0; }
-    else { iter->second = 0; }
+    auto iter = sub_feat_map.find(position);//查找特征地图中是否有该体素
+    if (iter == sub_feat_map.end()) { sub_feat_map[position] = 0; }//不存在点,添加点,并初始化为0
+    else { iter->second = 0; }//存在,将值初始化为0
 
     // t_insert += omp_get_wtime()-t1;
     // double t2 = omp_get_wtime();
 
-    V3D pt_c(new_frame_->w2f(pt_w));
+    V3D pt_c(new_frame_->w2f(pt_w));//将世界坐标系下的点转换到相机坐标系下
 
-    if (pt_c[2] > 0)
+    if (pt_c[2] > 0)//深度大于0,该点位于相机前方
     {
       V2D px;
       // px[0] = fx * pt_c[0]/pt_c[2] + cx;
       // px[1] = fy * pt_c[1]/pt_c[2]+ cy;
-      px = new_frame_->cam_->world2cam(pt_c);
+      px = new_frame_->cam_->world2cam(pt_c);//获得该点在图像上的像素坐标
 
-      if (new_frame_->cam_->isInFrame(px.cast<int>(), border))
+      if (new_frame_->cam_->isInFrame(px.cast<int>(), border))//判断是否在图像的有效范围内,border为边缘保护
       {
         // cv::circle(img_cp, cv::Point2f(px[0], px[1]), 3, cv::Scalar(0, 0, 255), -1, 8);
         float depth = pt_c[2];
         int col = int(px[0]);
         int row = int(px[1]);
-        it[width * row + col] = depth;
+        it[width * row + col] = depth;//每一行包含 width 个元素。索引表达式 width * row + col 表示位于第 row 行、第 col 列的像素位置
       }
     }
     // t_depth += omp_get_wtime()-t2;
@@ -435,19 +435,19 @@ void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &
   // printf("A. projection: %.6lf \n", omp_get_wtime() - ts0);
 
   // double t1 = omp_get_wtime();
-  vector<VOXEL_LOCATION> DeleteKeyList;
+  vector<VOXEL_LOCATION> DeleteKeyList;//保存那些不在视野范围内的体素,待删除
 
-  for (auto &iter : sub_feat_map)
+  for (auto &iter : sub_feat_map)//遍历sub_feat_map的元素
   {
     VOXEL_LOCATION position = iter.first;
 
     // double t4 = omp_get_wtime();
-    auto corre_voxel = feat_map.find(position);
+    auto corre_voxel = feat_map.find(position);//尝试寻找
     // double t5 = omp_get_wtime();
 
-    if (corre_voxel != feat_map.end())
+    if (corre_voxel != feat_map.end())//找到
     {
-      bool voxel_in_fov = false;
+      bool voxel_in_fov = false;//重置标志位
       std::vector<VisualPoint *> &voxel_points = corre_voxel->second->voxel_points;
       int voxel_num = voxel_points.size();
 
@@ -457,38 +457,38 @@ void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &
         if (pt == nullptr) continue;
         if (pt->obs_.size() == 0) continue;
 
-        V3D norm_vec(new_frame_->T_f_w_.rotation_matrix() * pt->normal_);
+        V3D norm_vec(new_frame_->T_f_w_.rotation_matrix() * pt->normal_);//通过变换矩阵将该点的法向量和坐标转换到当前帧的坐标系
         V3D dir(new_frame_->T_f_w_ * pt->pos_);
-        if (dir[2] < 0) continue;
+        if (dir[2] < 0) continue;//深度小于0,不在相机前方
         // dir.normalize();
         // if (dir.dot(norm_vec) <= 0.17) continue; // 0.34 70 degree  0.17 80 degree 0.08 85 degree
 
-        V2D pc(new_frame_->w2c(pt->pos_));
-        if (new_frame_->cam_->isInFrame(pc.cast<int>(), border))
+        V2D pc(new_frame_->w2c(pt->pos_));//将世界坐标系下的点转换到相机坐标系下
+        if (new_frame_->cam_->isInFrame(pc.cast<int>(), border))//判断是否在图像的有效范围内
         {
           // cv::circle(img_cp, cv::Point2f(pc[0], pc[1]), 3, cv::Scalar(0, 255, 255), -1, 8);
-          voxel_in_fov = true;
-          int index = static_cast<int>(pc[1] / grid_size) * grid_n_width + static_cast<int>(pc[0] / grid_size);
-          grid_num[index] = TYPE_MAP;
-          Vector3d obs_vec(new_frame_->pos() - pt->pos_);
-          float cur_dist = obs_vec.norm();
-          if (cur_dist <= map_dist[index])
+          voxel_in_fov = true;//在视野范围内
+          int index = static_cast<int>(pc[1] / grid_size) * grid_n_width + static_cast<int>(pc[0] / grid_size);//计算该点在网格中的位置
+          grid_num[index] = TYPE_MAP;//将该点标记为地图点
+          Vector3d obs_vec(new_frame_->pos() - pt->pos_);//观测向量
+          float cur_dist = obs_vec.norm();//观测距离
+          if (cur_dist <= map_dist[index])//如果观测距离小于地图距离
           {
             map_dist[index] = cur_dist;
             retrieve_voxel_points[index] = pt;
           }
         }
       }
-      if (!voxel_in_fov) { DeleteKeyList.push_back(position); }
+      if (!voxel_in_fov) { DeleteKeyList.push_back(position); }//不在视野范围内,待删除
     }
   }
 
-  // RayCasting Module
+  // RayCasting Module//光线投射模块
   if (raycast_en)
   {
     for (int i = 0; i < length; i++)
     {
-      if (grid_num[i] == TYPE_MAP || border_flag[i] == 1) continue;
+      if (grid_num[i] == TYPE_MAP || border_flag[i] == 1) continue;//如果该点已经被标记为地图点或者是边界点,则跳过
 
       // int row = static_cast<int>(i / grid_n_width) * grid_size + grid_size /
       // 2; int col = (i - static_cast<int>(i / grid_n_width) * grid_n_width) *
@@ -502,27 +502,27 @@ void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &
 
       for (const auto &it : rays_with_sample_points[i])
       {
-        V3D sample_point_w = new_frame_->f2w(it);
+        V3D sample_point_w = new_frame_->f2w(it);//将采样点转换到世界坐标系下
         // sample_points_temp.push_back(sample_point_w);
 
         for (int j = 0; j < 3; j++)
         {
-          loc_xyz[j] = floor(sample_point_w[j] / voxel_size);
+          loc_xyz[j] = floor(sample_point_w[j] / voxel_size);//将采样点转换到体素坐标系下
           if (loc_xyz[j] < 0) { loc_xyz[j] -= 1.0; }
         }
 
-        VOXEL_LOCATION sample_pos(loc_xyz[0], loc_xyz[1], loc_xyz[2]);
+        VOXEL_LOCATION sample_pos(loc_xyz[0], loc_xyz[1], loc_xyz[2]);//采样点的位置
 
         auto corre_sub_feat_map = sub_feat_map.find(sample_pos);
-        if (corre_sub_feat_map != sub_feat_map.end()) break;
+        if (corre_sub_feat_map != sub_feat_map.end()) break;//如果找到,跳过
 
         auto corre_feat_map = feat_map.find(sample_pos);
-        if (corre_feat_map != feat_map.end())
+        if (corre_feat_map != feat_map.end())//找到
         {
-          bool voxel_in_fov = false;
+          bool voxel_in_fov = false;//重置标志位
 
-          std::vector<VisualPoint *> &voxel_points = corre_feat_map->second->voxel_points;
-          int voxel_num = voxel_points.size();
+          std::vector<VisualPoint *> &voxel_points = corre_feat_map->second->voxel_points;//second代表值
+          int voxel_num = voxel_points.size();//体素点的数量
           if (voxel_num == 0) continue;
 
           for (int j = 0; j < voxel_num; j++)
@@ -535,27 +535,27 @@ void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &
             // sub_map_ray.push_back(pt); // cloud_visual_sub_map
             // add_sample = true;
 
-            V3D norm_vec(new_frame_->T_f_w_.rotation_matrix() * pt->normal_);
-            V3D dir(new_frame_->T_f_w_ * pt->pos_);
-            if (dir[2] < 0) continue;
-            dir.normalize();
+            V3D norm_vec(new_frame_->T_f_w_.rotation_matrix() * pt->normal_);//法向量
+            V3D dir(new_frame_->T_f_w_ * pt->pos_);//将该点的坐标转换到当前帧的坐标系下
+            if (dir[2] < 0) continue;//深度小于0,不在相机前方
+            dir.normalize();//归一化
             // if (dir.dot(norm_vec) <= 0.17) continue; // 0.34 70 degree 0.17 80 degree 0.08 85 degree
 
-            V2D pc(new_frame_->w2c(pt->pos_));
+            V2D pc(new_frame_->w2c(pt->pos_));//将世界坐标系下的点转换到相机坐标系下
 
-            if (new_frame_->cam_->isInFrame(pc.cast<int>(), border))
+            if (new_frame_->cam_->isInFrame(pc.cast<int>(), border))//判断是否在图像的有效范围内
             {
               // cv::circle(img_cp, cv::Point2f(pc[0], pc[1]), 3, cv::Scalar(255, 255, 0), -1, 8); 
               // sub_map_ray_fov.push_back(pt);
 
-              voxel_in_fov = true;
-              int index = static_cast<int>(pc[1] / grid_size) * grid_n_width + static_cast<int>(pc[0] / grid_size);
-              grid_num[index] = TYPE_MAP;
-              Vector3d obs_vec(new_frame_->pos() - pt->pos_);
+              voxel_in_fov = true;//在视野范围内
+              int index = static_cast<int>(pc[1] / grid_size) * grid_n_width + static_cast<int>(pc[0] / grid_size);//计算该点在网格中的位置索引
+              grid_num[index] = TYPE_MAP;//将该点标记为地图点
+              Vector3d obs_vec(new_frame_->pos() - pt->pos_);//观测向量
 
-              float cur_dist = obs_vec.norm();
+              float cur_dist = obs_vec.norm();//观测距离
 
-              if (cur_dist <= map_dist[index])
+              if (cur_dist <= map_dist[index])//如果观测距离小于地图距离
               {
                 map_dist[index] = cur_dist;
                 retrieve_voxel_points[index] = pt;
@@ -563,24 +563,24 @@ void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &
             }
           }
 
-          if (voxel_in_fov) sub_feat_map[sample_pos] = 0;
+          if (voxel_in_fov) sub_feat_map[sample_pos] = 0;//在视野范围内
           break;
         }
         else
         {
-          VOXEL_LOCATION sample_pos(loc_xyz[0], loc_xyz[1], loc_xyz[2]);
-          auto iter = plane_map.find(sample_pos);
+          VOXEL_LOCATION sample_pos(loc_xyz[0], loc_xyz[1], loc_xyz[2]);//采样点的位置
+          auto iter = plane_map.find(sample_pos);//在sample_pos查找
           if (iter != plane_map.end())
           {
-            VoxelOctoTree *current_octo;
-            current_octo = iter->second->find_correspond(sample_point_w);
-            if (current_octo->plane_ptr_->is_plane_)
+            VoxelOctoTree *current_octo;//当前八叉树
+            current_octo = iter->second->find_correspond(sample_point_w);//找到对应的八叉树
+            if (current_octo->plane_ptr_->is_plane_)//如果是平面
             {
-              pointWithVar plane_center;
-              VoxelPlane &plane = *current_octo->plane_ptr_;
+              pointWithVar plane_center;//平面中心
+              VoxelPlane &plane = *current_octo->plane_ptr_;//取出平面
               plane_center.point_w = plane.center_;
               plane_center.normal = plane.normal_;
-              visual_submap->add_from_voxel_map.push_back(plane_center);
+              visual_submap->add_from_voxel_map.push_back(plane_center);//添加到视觉子地图
               break;
             }
           }
@@ -592,7 +592,7 @@ void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &
 
   for (auto &key : DeleteKeyList)
   {
-    sub_feat_map.erase(key);
+    sub_feat_map.erase(key);//删除不在视野范围内的体素
   }
 
   // double t2 = omp_get_wtime();
@@ -608,15 +608,15 @@ void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &
     {
       // double t_1 = omp_get_wtime();
 
-      VisualPoint *pt = retrieve_voxel_points[i];
+      VisualPoint *pt = retrieve_voxel_points[i];//获取该点
       // visual_sub_map_cur.push_back(pt); // before
 
-      V2D pc(new_frame_->w2c(pt->pos_));
+      V2D pc(new_frame_->w2c(pt->pos_));//将世界坐标系下的点转换到相机坐标系下
 
       // cv::circle(img_cp, cv::Point2f(pc[0], pc[1]), 3, cv::Scalar(0, 0, 255), -1, 8); // Green Sparse Align tracked
 
-      V3D pt_cam(new_frame_->w2f(pt->pos_));
-      bool depth_continous = false;
+      V3D pt_cam(new_frame_->w2f(pt->pos_));//将世界坐标系下的点转换到相机坐标系下
+      bool depth_continous = false;//重置标志位
       for (int u = -patch_size_half; u <= patch_size_half; u++)
       {
         for (int v = -patch_size_half; v <= patch_size_half; v++)
@@ -627,7 +627,7 @@ void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &
 
           if (depth == 0.) continue;
 
-          double delta_dist = abs(pt_cam[2] - depth);
+          double delta_dist = abs(pt_cam[2] - depth);//深度差
 
           if (delta_dist > 0.5)
           {
@@ -1687,13 +1687,13 @@ void VIOManager::updateState(cv::Mat img, int level)
   // if (state->inv_expo_time < 0.0)  {ROS_ERROR("reset expo time!!!!!!!!!!\n"); state->inv_expo_time = 0.0;}
 }
 
-void VIOManager::updateFrameState(StatesGroup state)
+void VIOManager::updateFrameState(StatesGroup state)//更新相机状态
 {
-  M3D Rwi(state.rot_end);
-  V3D Pwi(state.pos_end);
-  Rcw = Rci * Rwi.transpose();
-  Pcw = -Rci * Rwi.transpose() * Pwi + Pci;
-  new_frame_->T_f_w_ = SE3(Rcw, Pcw);
+  M3D Rwi(state.rot_end);//imu到world的旋转矩阵
+  V3D Pwi(state.pos_end);//imu到world的平移向量
+  Rcw = Rci * Rwi.transpose();//世界坐标系到相机坐标系的旋转矩阵
+  Pcw = -Rci * Rwi.transpose() * Pwi + Pci;//世界坐标系到相机坐标系的平移向量
+  new_frame_->T_f_w_ = SE3(Rcw, Pcw);//相机到世界的变换矩阵
 }
 
 void VIOManager::plotTrackedPoints()
@@ -1785,51 +1785,53 @@ void VIOManager::dumpDataForColmap()
 
 void VIOManager::processFrame(cv::Mat &img, vector<pointWithVar> &pg, const unordered_map<VOXEL_LOCATION, VoxelOctoTree *> &feat_map, double img_time)
 {
-  if (width != img.cols || height != img.rows)
+  printf("width: %d, height: %d,img.cols: %d,img.rows: %d,\n", width , height , img.cols, img.rows);
+  if (width != img.cols || height != img.rows)//修改图像分辨率
   {
     if (img.empty()) printf("[ VIO ] Empty Image!\n");
     cv::resize(img, img, cv::Size(img.cols * image_resize_factor, img.rows * image_resize_factor), 0, 0, CV_INTER_LINEAR);
   }
+  printf("img.cols: %d,img.rows: %d,\n", img.cols, img.rows);
   img_rgb = img.clone();
   img_cp = img.clone();
   // img_test = img.clone();
 
-  if (img.channels() == 3) cv::cvtColor(img, img, CV_BGR2GRAY);
+  if (img.channels() == 3) cv::cvtColor(img, img, CV_BGR2GRAY);//转换为灰度图
 
-  new_frame_.reset(new Frame(cam, img));
+  new_frame_.reset(new Frame(cam, img));//构建新的当前帧
   updateFrameState(*state);
   
   resetGrid();
 
   double t1 = omp_get_wtime();
 
-  retrieveFromVisualSparseMap(img, pg, feat_map);
+  retrieveFromVisualSparseMap(img, pg, feat_map);// 从视觉稀疏地图中检索特征点
 
   double t2 = omp_get_wtime();
 
-  computeJacobianAndUpdateEKF(img);
+  computeJacobianAndUpdateEKF(img);//F 计算雅克比矩阵并更新EKF
 
   double t3 = omp_get_wtime();
 
-  generateVisualMapPoints(img, pg);
+  generateVisualMapPoints(img, pg);// 生成视觉地图点
 
   double t4 = omp_get_wtime();
   
-  plotTrackedPoints();
+  plotTrackedPoints();//绘制跟踪点
 
-  if (plot_flag) projectPatchFromRefToCur(feat_map);
+  if (plot_flag) projectPatchFromRefToCur(feat_map);//投影参考块到当前帧
 
   double t5 = omp_get_wtime();
 
-  updateVisualMapPoints(img);
+  updateVisualMapPoints(img);//更新视觉地图点
 
   double t6 = omp_get_wtime();
 
-  updateReferencePatch(feat_map);
+  updateReferencePatch(feat_map);//更新参考块
 
   double t7 = omp_get_wtime();
   
-  if(colmap_output_en)  dumpDataForColmap();
+  if(colmap_output_en)  dumpDataForColmap();//输出colmap数据
 
   frame_count++;
   ave_total = ave_total * (frame_count - 1) / frame_count + (t7 - t1 - (t5 - t4)) / frame_count;
