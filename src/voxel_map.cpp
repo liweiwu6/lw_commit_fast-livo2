@@ -348,12 +348,12 @@ void VoxelMapManager::StateEstimation(StatesGroup &state_propagat)
 
   for (size_t i = 0; i < feats_down_body_->size(); i++)//计算所有特征点的协方差矩阵和叉乘矩阵
   {
-    V3D point_this(feats_down_body_->points[i].x, feats_down_body_->points[i].y, feats_down_body_->points[i].z);// ? lidar坐标系 or imu坐标系
+    V3D point_this(feats_down_body_->points[i].x, feats_down_body_->points[i].y, feats_down_body_->points[i].z);// * lidar坐标系 
     if (point_this[2] == 0) { point_this[2] = 0.001; }//防止除零
     M3D var;
-    calcBodyCov(point_this, config_setting_.dept_err_, config_setting_.beam_err_, var);//计算特征点的协方差矩阵
+    calcBodyCov(point_this, config_setting_.dept_err_, config_setting_.beam_err_, var);//计算特征点的协方差矩阵 这里是lidar坐标系
     body_cov_list_.push_back(var);
-    point_this = extR_ * point_this + extT_;//imu-->lidar？？？？？？？ extR_为lidar与imu外参
+    point_this = extR_ * point_this + extT_;// * lidar->imu extR_为lidar与imu外参
     M3D point_crossmat;
     point_crossmat << SKEW_SYM_MATRX(point_this);
     cross_mat_list_.push_back(point_crossmat); //叉乘矩阵
@@ -373,14 +373,14 @@ void VoxelMapManager::StateEstimation(StatesGroup &state_propagat)
   {
     double total_residual = 0.0;
     pcl::PointCloud<pcl::PointXYZI>::Ptr world_lidar(new pcl::PointCloud<pcl::PointXYZI>);
-    TransformLidar(state_.rot_end, state_.pos_end, feats_down_body_, world_lidar);//转换雷达坐标系
+    TransformLidar(state_.rot_end, state_.pos_end, feats_down_body_, world_lidar);//转换雷达坐标系 lidar->imu //! (imu为世界坐标系)
     M3D rot_var = state_.cov.block<3, 3>(0, 0);
     M3D t_var = state_.cov.block<3, 3>(3, 3);
-    for (size_t i = 0; i < feats_down_body_->size(); i++)
+    for (size_t i = 0; i < feats_down_body_->size(); i++)//计算每个点在imu坐标系下的协方差矩阵，写入到pv_list_中
     {
-      pointWithVar &pv = pv_list_[i];
+      pointWithVar &pv = pv_list_[i];//这里应该都是空的
       pv.point_b << feats_down_body_->points[i].x, feats_down_body_->points[i].y, feats_down_body_->points[i].z;//lidar坐标系下的点
-      pv.point_w << world_lidar->points[i].x, world_lidar->points[i].y, world_lidar->points[i].z;//世界坐标系下的点
+      pv.point_w << world_lidar->points[i].x, world_lidar->points[i].y, world_lidar->points[i].z;//世界坐标系下的点 imu
 
       M3D cov = body_cov_list_[i];
       M3D point_crossmat = cross_mat_list_[i];
@@ -669,7 +669,7 @@ void VoxelMapManager::BuildResidualListOMP(std::vector<pointWithVar> &pv_list, s
       loc_xyz[j] = pv.point_w[j] / voxel_size;
       if (loc_xyz[j] < 0) { loc_xyz[j] -= 1.0; }
     }
-    VOXEL_LOCATION position((int64_t)loc_xyz[0], (int64_t)loc_xyz[1], (int64_t)loc_xyz[2]);
+    VOXEL_LOCATION position((int64_t)loc_xyz[0], (int64_t)loc_xyz[1], (int64_t)loc_xyz[2]);//体素位置
     auto iter = voxel_map_.find(position);
     if (iter != voxel_map_.end())//找到对应的体素
     {
@@ -677,7 +677,7 @@ void VoxelMapManager::BuildResidualListOMP(std::vector<pointWithVar> &pv_list, s
       PointToPlane single_ptpl;
       bool is_sucess = false;
       double prob = 0;
-      build_single_residual(pv, current_octo, 0, is_sucess, prob, single_ptpl);//递归函数，用于计算单个点与体素平面的残差
+      build_single_residual(pv, current_octo, 0, is_sucess, prob, single_ptpl);//todo递归函数，用于计算单个点与体素平面的残差
       if (!is_sucess)//如果没有找到对应的体素,查找附近的体素
       {
         VOXEL_LOCATION near_position = position;

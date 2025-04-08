@@ -87,7 +87,7 @@ struct LidarMeasureGroup
   {
     lidar_frame_beg_time = -0.0;
     lidar_frame_end_time = 0.0;
-    last_lio_update_time = -1.0;
+    last_lio_update_time = -1.0;//在imu传播时更新
     lio_vio_flg = WAIT;
     this->lidar.reset(new PointCloudXYZI());
     this->pcl_proc_cur.reset(new PointCloudXYZI());

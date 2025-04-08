@@ -350,7 +350,7 @@ void LIVMapper::handleLIO()
 
   feats_down_size = feats_down_body->points.size();//降采样后点云数量
   voxelmap_manager->feats_down_body_ = feats_down_body;
-  transformLidar(_state.rot_end, _state.pos_end, feats_down_body, feats_down_world); // !此时lidar应该是imu坐标系 _state为IMU到world的变换
+  transformLidar(_state.rot_end, _state.pos_end, feats_down_body, feats_down_world); // ! 此时lidar应该是lidar坐标系 _state为lidar到imu的变换
   voxelmap_manager->feats_down_world_ = feats_down_world;
   voxelmap_manager->feats_down_size_ = feats_down_size;
   

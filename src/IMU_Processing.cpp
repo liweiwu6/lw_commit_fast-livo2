@@ -417,7 +417,7 @@ void ImuProcess::UndistortPcl(LidarMeasureGroup &lidar_meas, StatesGroup &state_
 
     // unbiased_gyr = V3D(IMUpose.back().gyr[0], IMUpose.back().gyr[1], IMUpose.back().gyr[2]);
     // cout<<"prop end - start: "<<prop_end_time - prop_beg_time<<" dt_all: "<<dt_all<<endl;
-    lidar_meas.last_lio_update_time = prop_end_time;
+    lidar_meas.last_lio_update_time = prop_end_time;//更新最后一次传播的结束时间
     // dt = prop_end_time - imu_end_time;
     // printf("[ LIO Propagation ] dt: %lf \n", dt);
     break;
@@ -485,7 +485,7 @@ void ImuProcess::UndistortPcl(LidarMeasureGroup &lidar_meas, StatesGroup &state_
     {
       auto head = it_kp - 1;
       auto tail = it_kp;
-      R_imu << MAT_FROM_ARRAY(head->rot);
+      R_imu << MAT_FROM_ARRAY(head->rot);//向量转换为矩阵
       acc_imu << VEC_FROM_ARRAY(head->acc);
       // cout<<"head imu acc: "<<acc_imu.transpose()<<endl;
       vel_imu << VEC_FROM_ARRAY(head->vel);
@@ -501,14 +501,14 @@ void ImuProcess::UndistortPcl(LidarMeasureGroup &lidar_meas, StatesGroup &state_
         dt = it_pcl->curvature / double(1000) - head->offset_time;
 
         /* Transform to the 'end' frame // * 传播到最后时刻 */
-        M3D R_i(R_imu * Exp(angvel_avr, dt));
-        V3D T_ei(pos_imu + vel_imu * dt + 0.5 * acc_imu * dt * dt - state_inout.pos_end);
+        M3D R_i(R_imu * Exp(angvel_avr, dt));//旋转矩阵
+        V3D T_ei(pos_imu + vel_imu * dt + 0.5 * acc_imu * dt * dt - state_inout.pos_end);//平移矩阵
 
-        V3D P_i(it_pcl->x, it_pcl->y, it_pcl->z);
+        V3D P_i(it_pcl->x, it_pcl->y, it_pcl->z);//待矫正的点
         // V3D P_compensate = Lid_rot_to_IMU.transpose() *
         // (state_inout.rot_end.transpose() * (R_i * (Lid_rot_to_IMU * P_i +
         // Lid_offset_to_IMU) + T_ei) - Lid_offset_to_IMU);
-        V3D P_compensate = (extR_Ri * (R_i * (Lid_rot_to_IMU * P_i + Lid_offset_to_IMU) + T_ei) - exrR_extT);
+        V3D P_compensate = (extR_Ri * (R_i * (Lid_rot_to_IMU * P_i + Lid_offset_to_IMU) + T_ei) - exrR_extT);// ? 先把lidar点转换到imu坐标系，再进行去畸变，又转回了lidar坐标系?
 
         /// save Undistorted points and their rotation 保存去畸变的点云和它们的旋转
         it_pcl->x = P_compensate(0);
@@ -518,7 +518,7 @@ void ImuProcess::UndistortPcl(LidarMeasureGroup &lidar_meas, StatesGroup &state_
         if (it_pcl == pcl_wait_proc.points.begin()) break;
       }
     }
-    pcl_out = pcl_wait_proc;
+    pcl_out = pcl_wait_proc;//这里去畸变后的点，应该是lidar坐标系
     pcl_wait_proc.clear();
     IMUpose.clear();
   }// * //////////////////////反向传播结束 //////////////////////
