@@ -348,10 +348,10 @@ double VIOManager::calculateNCC(float *ref_patch, float *cur_patch, int patch_si
   }
   return numerator / sqrt(demoniator1 * demoniator2 + 1e-10);
 }
-/////////////////////从视觉稀疏地图中检索特征点////////////////////////
+//* ///////////////////从视觉稀疏地图中检索特征点////////////////////////
 void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &pg, const unordered_map<VOXEL_LOCATION, VoxelOctoTree *> &plane_map)
 {
-  if (feat_map.size() <= 0) return;
+  if (feat_map.size() <= 0) return;//?
   double ts0 = omp_get_wtime();
 
   // pg_down->reserve(feat_map.size());
@@ -1099,7 +1099,7 @@ void VIOManager::updateReferencePatch(const unordered_map<VOXEL_LOCATION, VoxelO
   }
 }
 
-void VIOManager::projectPatchFromRefToCur(const unordered_map<VOXEL_LOCATION, VoxelOctoTree *> &plane_map)
+void VIOManager::projectPatchFromRefToCur(const unordered_map<VOXEL_LOCATION, VoxelOctoTree *> &plane_map)//将参考帧中的图像块投影到当前帧中
 {
   if (total_points == 0) return;
   // if(new_frame_->id_ != 2) return; //124
@@ -1782,16 +1782,16 @@ void VIOManager::dumpDataForColmap()
   fout_colmap << "0.0 0.0 -1" << std::endl;
   cnt++;
 }
-
+//?传入的img_time参数好像没用到
 void VIOManager::processFrame(cv::Mat &img, vector<pointWithVar> &pg, const unordered_map<VOXEL_LOCATION, VoxelOctoTree *> &feat_map, double img_time)
 {
-  printf("width: %d, height: %d,img.cols: %d,img.rows: %d,\n", width , height , img.cols, img.rows);
+  // printf("width: %d, height: %d,img.cols: %d,img.rows: %d,\n", width , height , img.cols, img.rows);
   if (width != img.cols || height != img.rows)//修改图像分辨率
   {
     if (img.empty()) printf("[ VIO ] Empty Image!\n");
     cv::resize(img, img, cv::Size(img.cols * image_resize_factor, img.rows * image_resize_factor), 0, 0, CV_INTER_LINEAR);
   }
-  printf("img.cols: %d,img.rows: %d,\n", img.cols, img.rows);
+  // printf("img.cols: %d,img.rows: %d,\n", img.cols, img.rows);
   img_rgb = img.clone();
   img_cp = img.clone();
   // img_test = img.clone();
@@ -1799,39 +1799,39 @@ void VIOManager::processFrame(cv::Mat &img, vector<pointWithVar> &pg, const unor
   if (img.channels() == 3) cv::cvtColor(img, img, CV_BGR2GRAY);//转换为灰度图
 
   new_frame_.reset(new Frame(cam, img));//构建新的当前帧
-  updateFrameState(*state);
+  updateFrameState(*state);//更新了一些坐标变换
   
-  resetGrid();
+  resetGrid();//重置网格
 
   double t1 = omp_get_wtime();
 
-  retrieveFromVisualSparseMap(img, pg, feat_map);// 从视觉稀疏地图中检索特征点
+  retrieveFromVisualSparseMap(img, pg, feat_map);//todo 从视觉稀疏地图中检索特征点 pg是pointwithvar类型的点云数据
 
   double t2 = omp_get_wtime();
 
-  computeJacobianAndUpdateEKF(img);//F 计算雅克比矩阵并更新EKF
+  computeJacobianAndUpdateEKF(img);//todo 计算雅克比矩阵并更新EKF
 
   double t3 = omp_get_wtime();
 
-  generateVisualMapPoints(img, pg);// 生成视觉地图点
+  generateVisualMapPoints(img, pg);//todo 生成视觉地图点
 
   double t4 = omp_get_wtime();
   
-  plotTrackedPoints();//绘制跟踪点
+  plotTrackedPoints();//todo 绘制跟踪点
 
-  if (plot_flag) projectPatchFromRefToCur(feat_map);//投影参考块到当前帧
+  if (plot_flag) projectPatchFromRefToCur(feat_map);//todo 将参考帧中的图像块投影到当前帧中
 
   double t5 = omp_get_wtime();
 
-  updateVisualMapPoints(img);//更新视觉地图点
+  updateVisualMapPoints(img);//todo 更新视觉地图点
 
   double t6 = omp_get_wtime();
 
-  updateReferencePatch(feat_map);//更新参考块
+  updateReferencePatch(feat_map);//todo 更新参考块
 
   double t7 = omp_get_wtime();
   
-  if(colmap_output_en)  dumpDataForColmap();//输出colmap数据
+  if(colmap_output_en)  dumpDataForColmap();//todo 输出colmap数据
 
   frame_count++;
   ave_total = ave_total * (frame_count - 1) / frame_count + (t7 - t1 - (t5 - t4)) / frame_count;

@@ -233,8 +233,8 @@ void ImuProcess::UndistortPcl(LidarMeasureGroup &lidar_meas, StatesGroup &state_
   printf("[ IMU ] IMU data sequence size: %zu \n", meas.imu.size());
   printf("[ IMU ] lidar_scan_index_now: %d \n", lidar_meas.lidar_scan_index_now);
 
-  const double prop_end_time = lidar_meas.lio_vio_flg == LIO ? meas.lio_time : meas.vio_time;
-
+  const double prop_end_time = lidar_meas.lio_vio_flg == LIO ? meas.lio_time : meas.vio_time;//!这里只在LIO时会进行前向传播，VIO时无IMU数据（LIO时，prop_end_time始终是当前img的时间戳）
+  printf("meas.lio_time: %lf, meas.vio_time: %lf imu_beg_time: %lf,imu_end_time: %lf \n", meas.lio_time,meas.vio_time,imu_beg_time,imu_end_time);
   /*** cut lidar point based on the propagation-start time and required
    * propagation-end time ***/
   // const double pcl_offset_time = (prop_end_time -

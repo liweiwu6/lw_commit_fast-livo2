@@ -134,11 +134,11 @@ void VoxelOctoTree::init_plane(const std::vector<pointWithVar> &points, VoxelPla
   }
 }
 
-void VoxelOctoTree::init_octo_tree()
+void VoxelOctoTree::init_octo_tree()//初始化八叉树
 {
   if (temp_points_.size() > points_size_threshold_)//如果点云数量大于阈值
   {
-    init_plane(temp_points_, plane_ptr_);//todo检查是否可以拟合成一个平面
+    init_plane(temp_points_, plane_ptr_);//todo 检查是否可以拟合成一个平面
     if (plane_ptr_->is_plane_ == true)
     {
       octo_state_ = 0;//无需细分
@@ -153,7 +153,7 @@ void VoxelOctoTree::init_octo_tree()
     else
     {
       octo_state_ = 1;
-      cut_octo_tree();//进一步细分八叉树
+      cut_octo_tree();//todo进一步细分八叉树
     }
     init_octo_ = true;//已经初始化
     new_points_ = 0;
@@ -216,7 +216,7 @@ void VoxelOctoTree::cut_octo_tree()
   }
 }
 
-void VoxelOctoTree::UpdateOctoTree(const pointWithVar &pv)
+void VoxelOctoTree::UpdateOctoTree(const pointWithVar &pv)//todo更新八叉树
 {
   if (!init_octo_)
   {
@@ -393,7 +393,7 @@ void VoxelMapManager::StateEstimation(StatesGroup &state_propagat)
 
     // double t1 = omp_get_wtime();
 
-    BuildResidualListOMP(pv_list_, ptpl_list_);// todo 构建残差列表
+    BuildResidualListOMP(pv_list_, ptpl_list_);// * 构建残差列表 
 
     // build_residual_time += omp_get_wtime() - t1;
 
@@ -412,14 +412,14 @@ void VoxelMapManager::StateEstimation(StatesGroup &state_propagat)
     VectorXd R_inv(effct_feat_num_);//测量协方差的逆对角元素
     VectorXd meas_vec(effct_feat_num_);//测量残差向量
     meas_vec.setZero();//初始化为0
-    for (int i = 0; i < effct_feat_num_; i++)
+    for (int i = 0; i < effct_feat_num_; i++)//*计算每个点的测量协方差和雅可比矩阵H
     {
       auto &ptpl = ptpl_list_[i];
-      V3D point_this(ptpl.point_b_);
+      V3D point_this(ptpl.point_b_);//lidar坐标系
       point_this = extR_ * point_this + extT_;//IMU坐标系
       V3D point_body(ptpl.point_b_);//lidar坐标系
-      M3D point_crossmat;
-      point_crossmat << SKEW_SYM_MATRX(point_this);
+      M3D point_crossmat;//叉乘矩阵
+      point_crossmat << SKEW_SYM_MATRX(point_this);//调用宏，生成叉乘矩阵（反对称矩阵）
 
       /*** get the normal vector of closest surface/corner   获取最近表面/角点的法向量       ***/
 
@@ -441,8 +441,8 @@ void VoxelMapManager::StateEstimation(StatesGroup &state_propagat)
       // var = state_propagat.rot_end * extR_ * ptpl_list_[i].body_cov_ * (state_propagat.rot_end * extR_).transpose() +
       //       state_propagat.cov.block<3, 3>(3, 3) - point_crossmat * state_propagat.cov.block<3, 3>(0, 0) * point_crossmat;
 
-      // point_body cov
-      var = state_propagat.rot_end * extR_ * ptpl_list_[i].body_cov_ * (state_propagat.rot_end * extR_).transpose();
+      // point_body cov 
+      var = state_propagat.rot_end * extR_ * ptpl_list_[i].body_cov_ * (state_propagat.rot_end * extR_).transpose();//将激光雷达坐标系下的协方差矩阵转换到世界坐标系下
 
       double sigma_l = J_nq * ptpl_list_[i].plane_var_ * J_nq.transpose();//测量噪声
 
@@ -456,10 +456,10 @@ void VoxelMapManager::StateEstimation(StatesGroup &state_propagat)
           ptpl_list_[i].normal_[1] * R_inv(i), ptpl_list_[i].normal_[2] * R_inv(i);
       meas_vec(i) = -ptpl_list_[i].dis_to_plane_;
     }
-    EKF_stop_flg = false;
-    flg_EKF_converged = false;
-    /*** Iterative Kalman Filter Update    迭代卡尔曼滤波更新   ***/
-    MatrixXd K(DIM_STATE, effct_feat_num_);
+    EKF_stop_flg = false;//停止标志
+    flg_EKF_converged = false;//收敛标志
+    /*** Iterative Kalman Filter Update    迭代卡尔曼滤波更新   ***/  // todo
+    MatrixXd K(DIM_STATE, effct_feat_num_);// ? 好像没有用到这个变量
     // auto &&Hsub_T = Hsub.transpose();
     auto &&HTz = Hsub_T_R_inv * meas_vec;
     // fout_dbg<<"HTz: "<<HTz<<endl;
@@ -474,7 +474,7 @@ void VoxelMapManager::StateEstimation(StatesGroup &state_propagat)
     state_ += solution;
     auto rot_add = solution.block<3, 1>(0, 0);
     auto t_add = solution.block<3, 1>(3, 0);
-    if ((rot_add.norm() * 57.3 < 0.01) && (t_add.norm() * 100 < 0.015)) { flg_EKF_converged = true; }
+    if ((rot_add.norm() * 57.3 < 0.01) && (t_add.norm() * 100 < 0.015)) { flg_EKF_converged = true; }//收敛判断
     V3D euler_cur = state_.rot_end.eulerAngles(2, 1, 0);
 
     /*** Rematch Judgement  重新匹配判断 ***/
@@ -607,27 +607,27 @@ V3F VoxelMapManager::RGBFromVoxel(const V3D &input_point)
   return RGB;
 }
 
-void VoxelMapManager::UpdateVoxelMap(const std::vector<pointWithVar> &input_points)
+void VoxelMapManager::UpdateVoxelMap(const std::vector<pointWithVar> &input_points)//更新地图
 {
-  float voxel_size = config_setting_.max_voxel_size_;
-  float planer_threshold = config_setting_.planner_threshold_;
-  int max_layer = config_setting_.max_layer_;
-  int max_points_num = config_setting_.max_points_num_;
-  std::vector<int> layer_init_num = config_setting_.layer_init_num_;
+  float voxel_size = config_setting_.max_voxel_size_;//体素大小
+  float planer_threshold = config_setting_.planner_threshold_;//平面阈值
+  int max_layer = config_setting_.max_layer_;//最大层数
+  int max_points_num = config_setting_.max_points_num_;//最大点数
+  std::vector<int> layer_init_num = config_setting_.layer_init_num_;//每层初始化点数
   uint plsize = input_points.size();
   for (uint i = 0; i < plsize; i++)
   {
     const pointWithVar p_v = input_points[i];
     float loc_xyz[3];
-    for (int j = 0; j < 3; j++)
+    for (int j = 0; j < 3; j++)//计算点在体素地图中的位置
     {
       loc_xyz[j] = p_v.point_w[j] / voxel_size;
       if (loc_xyz[j] < 0) { loc_xyz[j] -= 1.0; }
     }
     VOXEL_LOCATION position((int64_t)loc_xyz[0], (int64_t)loc_xyz[1], (int64_t)loc_xyz[2]);
     auto iter = voxel_map_.find(position);
-    if (iter != voxel_map_.end()) { voxel_map_[position]->UpdateOctoTree(p_v); }
-    else
+    if (iter != voxel_map_.end()) { voxel_map_[position]->UpdateOctoTree(p_v); }//体素存在，更新
+    else//新建体素
     {
       VoxelOctoTree *octo_tree = new VoxelOctoTree(max_layer, 0, layer_init_num[0], max_points_num, planer_threshold);
       voxel_map_[position] = octo_tree;
@@ -660,7 +660,7 @@ void VoxelMapManager::BuildResidualListOMP(std::vector<pointWithVar> &pv_list, s
     omp_set_num_threads(MP_PROC_NUM);//多线程计算
     #pragma omp parallel for
   #endif
-  for (int i = 0; i < index.size(); i++)
+  for (int i = 0; i < index.size(); i++)//迭代计算扫描中的所有LiDAR点与地图中各平面之间的残差
   {
     pointWithVar &pv = pv_list[i];
     float loc_xyz[3];
@@ -677,7 +677,7 @@ void VoxelMapManager::BuildResidualListOMP(std::vector<pointWithVar> &pv_list, s
       PointToPlane single_ptpl;
       bool is_sucess = false;
       double prob = 0;
-      build_single_residual(pv, current_octo, 0, is_sucess, prob, single_ptpl);//todo递归函数，用于计算单个点与体素平面的残差
+      build_single_residual(pv, current_octo, 0, is_sucess, prob, single_ptpl);// * 递归函数，用于计算单个点与体素平面的残差   构建残差
       if (!is_sucess)//如果没有找到对应的体素,查找附近的体素
       {
         VOXEL_LOCATION near_position = position;
@@ -705,14 +705,14 @@ void VoxelMapManager::BuildResidualListOMP(std::vector<pointWithVar> &pv_list, s
       }
     }
   }
-  for (size_t i = 0; i < useful_ptpl.size(); i++)
+  for (size_t i = 0; i < useful_ptpl.size(); i++)//取出有效的残差
   {
     if (useful_ptpl[i]) { ptpl_list.push_back(all_ptpl_list[i]); }
   }
 }
 
 void VoxelMapManager::build_single_residual(pointWithVar &pv, const VoxelOctoTree *current_octo, const int current_layer, bool &is_sucess,
-                                            double &prob, PointToPlane &single_ptpl)//todo
+                                            double &prob, PointToPlane &single_ptpl) 
 {
   int max_layer = config_setting_.max_layer_;
   double sigma_num = config_setting_.sigma_num_;
@@ -721,12 +721,12 @@ void VoxelMapManager::build_single_residual(pointWithVar &pv, const VoxelOctoTre
   Eigen::Vector3d p_w = pv.point_w;//点的世界坐标
   if (current_octo->plane_ptr_->is_plane_)//检查是否含有平面信息
   {
-    VoxelPlane &plane = *current_octo->plane_ptr_;
-    Eigen::Vector3d p_world_to_center = p_w - plane.center_;
+    VoxelPlane &plane = *current_octo->plane_ptr_;//取出平面信息
+    Eigen::Vector3d p_world_to_center = p_w - plane.center_;//计算点到平面中心的向量
     float dis_to_plane = fabs(plane.normal_(0) * p_w(0) + plane.normal_(1) * p_w(1) + plane.normal_(2) * p_w(2) + plane.d_);//点到平面的距离
     float dis_to_center = (plane.center_(0) - p_w(0)) * (plane.center_(0) - p_w(0)) + (plane.center_(1) - p_w(1)) * (plane.center_(1) - p_w(1)) +
                           (plane.center_(2) - p_w(2)) * (plane.center_(2) - p_w(2));//点到平面中心的距离
-    float range_dis = sqrt(dis_to_center - dis_to_plane * dis_to_plane);//
+    float range_dis = sqrt(dis_to_center - dis_to_plane * dis_to_plane);//计算点到平面中心的水平距离（投影距离）
 
     if (range_dis <= radius_k * plane.radius_)//断点是否在平面的有效范围内
     {
@@ -751,7 +751,7 @@ void VoxelMapManager::build_single_residual(pointWithVar &pv, const VoxelOctoTre
           single_ptpl.center_ = plane.center_;
           single_ptpl.d_ = plane.d_;
           single_ptpl.layer_ = current_layer;
-          single_ptpl.dis_to_plane_ = plane.normal_(0) * p_w(0) + plane.normal_(1) * p_w(1) + plane.normal_(2) * p_w(2) + plane.d_;
+          single_ptpl.dis_to_plane_ = plane.normal_(0) * p_w(0) + plane.normal_(1) * p_w(1) + plane.normal_(2) * p_w(2) + plane.d_;//*计算点 p_w 到平面的有符号距离
         }
         return;
       }
