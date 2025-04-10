@@ -153,7 +153,7 @@ void VoxelOctoTree::init_octo_tree()//初始化八叉树
     else
     {
       octo_state_ = 1;
-      cut_octo_tree();//todo进一步细分八叉树
+      cut_octo_tree();//todo进一步细分八叉树（不断细分，直到找到平面或者达到最大层数）
     }
     init_octo_ = true;//已经初始化
     new_points_ = 0;
@@ -162,7 +162,7 @@ void VoxelOctoTree::init_octo_tree()//初始化八叉树
 
 void VoxelOctoTree::cut_octo_tree()
 {
-  if (layer_ >= max_layer_)
+  if (layer_ >= max_layer_)//超过最大层数，停止
   {
     octo_state_ = 0;
     return;
@@ -173,7 +173,18 @@ void VoxelOctoTree::cut_octo_tree()
     if (temp_points_[i].point_w[0] > voxel_center_[0]) { xyz[0] = 1; }
     if (temp_points_[i].point_w[1] > voxel_center_[1]) { xyz[1] = 1; }
     if (temp_points_[i].point_w[2] > voxel_center_[2]) { xyz[2] = 1; }
-    int leafnum = 4 * xyz[0] + 2 * xyz[1] + xyz[2];
+    int leafnum = 4 * xyz[0] + 2 * xyz[1] + xyz[2];//确定八叉树的子节点
+        // 8个外框示意图
+    // clang-format off
+    // 第一层：左上1 右上2 左下3 右下4
+    // 第二层：左上5 右上6 左下7 右下8
+    //     ---> x    /-------/-------/|
+    //    /|        /-------/-------/||
+    //   / |       /-------/-------/ ||
+    //  y  |z      |       |       | /|
+    //             |_______|_______|/|/
+    //             |       |       | /
+    //             |_______|_______|/
     if (leaves_[leafnum] == nullptr)
     {
       leaves_[leafnum] = new VoxelOctoTree(max_layer_, layer_ + 1, layer_init_num_[layer_ + 1], max_points_num_, planer_threshold_);
@@ -421,7 +432,7 @@ void VoxelMapManager::StateEstimation(StatesGroup &state_propagat)
       M3D point_crossmat;//叉乘矩阵
       point_crossmat << SKEW_SYM_MATRX(point_this);//调用宏，生成叉乘矩阵（反对称矩阵）
 
-      /*** get the normal vector of closest surface/corner   获取最近表面/角点的法向量       ***/
+      /***  get the normal vector of closest surface/corner   获取最近表面/角点的法向量       ***/
 
       V3D point_world = state_propagat.rot_end * point_this + state_propagat.pos_end;//世界坐标系
       Eigen::Matrix<double, 1, 6> J_nq;//雅可比矩阵
@@ -576,7 +587,7 @@ void VoxelMapManager::BuildVoxelMap()
     {
       VoxelOctoTree *octo_tree = new VoxelOctoTree(max_layer, 0, layer_init_num[0], max_points_num, planer_threshold);
       voxel_map_[position] = octo_tree;//八叉树
-      voxel_map_[position]->quater_length_ = voxel_size / 4;//四分之一体素长度
+      voxel_map_[position]->quater_length_ = voxel_size / 4;//四分之一体素长度（计算子体素中心点在世界系的坐标，所以需要子体素的半边长，即1/4父体素边长）
       voxel_map_[position]->voxel_center_[0] = (0.5 + position.x) * voxel_size;//体素中心
       voxel_map_[position]->voxel_center_[1] = (0.5 + position.y) * voxel_size;//体素中心
       voxel_map_[position]->voxel_center_[2] = (0.5 + position.z) * voxel_size;//体素中心
