@@ -57,7 +57,7 @@ vio:
   max_iterations: 5 #最大迭代次数
   outlier_threshold: 1000 # 78 100 156 #100 200 500 700 infinite  #离群值阈值
   img_point_cov: 100 # 100 1000  #图像点协方差
-  patch_size: 8 #补丁大小
+  patch_size: 8 #图像块大小
   patch_pyrimid_level: 4 #补丁金字塔层数
   normal_en: true #法向量
   raycast_en: false #射线投影

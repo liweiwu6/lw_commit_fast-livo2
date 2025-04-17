@@ -63,7 +63,8 @@ public:
   bool imu_need_init = true;
   M3D Eye3d;
   V3D Zero3d;
-
+  int lidar_type;
+  
 private:
   void IMU_init(const MeasureGroup &meas, StatesGroup &state, int &N);
   void Forward_without_imu(LidarMeasureGroup &meas, StatesGroup &state_inout, PointCloudXYZI &pcl_out);

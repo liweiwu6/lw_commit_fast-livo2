@@ -567,7 +567,7 @@ void VoxelMapManager::BuildVoxelMap()
   }
 
   uint plsize = input_points.size();
-  for (uint i = 0; i < plsize; i++)
+  for (uint i = 0; i < plsize; i++)//将点加入到地图中
   {
     const pointWithVar p_v = input_points[i];
     float loc_xyz[3];
