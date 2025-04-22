@@ -60,7 +60,7 @@ vio:
   patch_size: 8 #图像块大小
   patch_pyrimid_level: 4 #补丁金字塔层数
   normal_en: true #法向量
-  raycast_en: false #射线投影
+  raycast_en: false #光线投影
   inverse_composition_en: false #逆向组合
   exposure_estimate_en: true #曝光估计
   inv_expo_cov: 0.1 #曝光协方差
