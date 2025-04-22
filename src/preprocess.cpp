@@ -185,11 +185,11 @@ void Preprocess::avia_handler(const livox_ros_driver::CustomMsg::ConstPtr &msg)/
           if (pl_full[i].x * pl_full[i].x + pl_full[i].y * pl_full[i].y + pl_full[i].z * pl_full[i].z >= blind_sqr)//检测点的距离
           {
             // printf("msg->points[%d].tag = %d \n",i,msg->points[i].tag);
-            if( msg->points[i].reflectivity > 5 ) // * 去除lidar产生的镜面反射
-            {
-              pl_surf.push_back(pl_full[i]);
-            }
-                
+            // if( msg->points[i].reflectivity > 5 ) // * 去除lidar产生的镜面反射
+            // {
+            //   pl_surf.push_back(pl_full[i]);
+            // }
+            pl_surf.push_back(pl_full[i]);
             // if (i % 100 == 0 || i == 0) printf("pl_full[i].curvature: %f \n",
             // pl_full[i].curvature);
           }

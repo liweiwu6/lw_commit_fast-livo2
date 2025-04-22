@@ -109,7 +109,7 @@ evo:
   pose_output_en: true
 
 pcd_save:
-  pcd_save_en: true
+  pcd_save_en: false
   colmap_output_en: false # need to set interval = -1
   filter_size_pcd: 0.2
   interval: -1

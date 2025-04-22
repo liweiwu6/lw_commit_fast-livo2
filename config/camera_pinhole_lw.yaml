@@ -1,16 +1,16 @@
 # Retail_Street, CBD_Building_01
-cam_model: Pinhole
-cam_width: 1280
-cam_height: 1024
-scale: 0.5
-cam_fx: 1293.56944
-cam_fy: 1293.3155
-cam_cx: 626.91359
-cam_cy: 522.799224
-cam_d0: -0.076160
-cam_d1: 0.123001
-cam_d2: -0.00113
-cam_d3: 0.000251
+# cam_model: Pinhole
+# cam_width: 1280
+# cam_height: 1024
+# scale: 0.5
+# cam_fx: 1293.56944
+# cam_fy: 1293.3155
+# cam_cx: 626.91359
+# cam_cy: 522.799224
+# cam_d0: -0.076160
+# cam_d1: 0.123001
+# cam_d2: -0.00113
+# cam_d3: 0.000251
 
 ####### Red_Sculpture
 # cam_model: Pinhole
@@ -55,15 +55,15 @@ cam_d3: 0.000251
 # cam_d3: -0.00110752991013068
 
 #ours
-# cam_model: Pinhole
-# cam_width: 1280
-# cam_height: 1024
-# scale: 0.5
-# cam_fx: 1410.431231
-# cam_fy: 1403.397877
-# cam_cx: 731.360949
-# cam_cy: 496.798976
-# cam_d0: -0.048612
-# cam_d1: 0.169242
-# cam_d2: -0.007548
-# cam_d3: 0.006408
+cam_model: Pinhole
+cam_width: 1280
+cam_height: 1024
+scale: 0.5
+cam_fx: 1410.431231
+cam_fy: 1403.397877
+cam_cx: 731.360949
+cam_cy: 496.798976
+cam_d0: -0.048612
+cam_d1: 0.169242
+cam_d2: -0.007548
+cam_d3: 0.006408

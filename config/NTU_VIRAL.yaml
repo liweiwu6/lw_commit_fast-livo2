@@ -75,7 +75,7 @@ publish:
   blind_rgb_points: 0.0
 
 evo:
-  seq_name: "eee_01"
+  seq_name: "nya_01"
   pose_output_en: true
 
 pcd_save:
