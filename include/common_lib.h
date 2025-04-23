@@ -100,9 +100,9 @@ struct LidarMeasureGroup
 
 typedef struct pointWithVar
 {
-  Eigen::Vector3d point_b;     // point in the lidar body frame
-  Eigen::Vector3d point_i;     // point in the imu body frame
-  Eigen::Vector3d point_w;     // point in the world frame
+  Eigen::Vector3d point_b;     // point in the lidar body frame 雷达
+  Eigen::Vector3d point_i;     // point in the imu body frame IMU
+  Eigen::Vector3d point_w;     // point in the world frame 世界
   Eigen::Matrix3d var_nostate; // the var removed the state covarience
   Eigen::Matrix3d body_var;
   Eigen::Matrix3d var;

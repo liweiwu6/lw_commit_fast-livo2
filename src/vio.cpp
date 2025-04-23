@@ -38,7 +38,7 @@ void VIOManager::setLidarToCameraExtrinsic(vector<double> &R, vector<double> &P)
   Pcl << VEC_FROM_ARRAY(P);
 }
 
-void VIOManager::initializeVIO()
+void VIOManager::initializeVIO()//初始化VIO,摄像头相关参数
 { 
   visual_submap = new SubSparseMap;
 
@@ -224,7 +224,7 @@ void VIOManager::getImagePatch(cv::Mat img, V2D pc, float *patch_tmp, int level)
   }
 }
 
-void VIOManager::insertPointIntoVoxelMap(VisualPoint *pt_new)
+void VIOManager::insertPointIntoVoxelMap(VisualPoint *pt_new)//将点插入到体素地图中
 {
   V3D pt_w(pt_new->pos_[0], pt_new->pos_[1], pt_new->pos_[2]);
   double voxel_size = 0.5;
@@ -235,7 +235,7 @@ void VIOManager::insertPointIntoVoxelMap(VisualPoint *pt_new)
     if (loc_xyz[j] < 0) { loc_xyz[j] -= 1.0; }
   }
   VOXEL_LOCATION position((int64_t)loc_xyz[0], (int64_t)loc_xyz[1], (int64_t)loc_xyz[2]);
-  auto iter = feat_map.find(position);
+  auto iter = feat_map.find(position);//VIO中的体素地图
   if (iter != feat_map.end())
   {
     iter->second->voxel_points.push_back(pt_new);
@@ -247,6 +247,7 @@ void VIOManager::insertPointIntoVoxelMap(VisualPoint *pt_new)
     ot->voxel_points.push_back(pt_new);
     feat_map[position] = ot;
   }
+  // printf("feat_map size: %ld \n", feat_map.size());//debug
 }
 
 void VIOManager::getWarpMatrixAffineHomography(const vk::AbstractCamera &cam, const V2D &px_ref, const V3D &xyz_ref, const V3D &normal_ref,
@@ -351,9 +352,9 @@ double VIOManager::calculateNCC(float *ref_patch, float *cur_patch, int patch_si
 //* ///////////////////从视觉稀疏地图中检索特征点////////////////////////
 void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &pg, const unordered_map<VOXEL_LOCATION, VoxelOctoTree *> &plane_map)//plane_map只在光线投射模块中使用到
 {
-  printf("feat_map size: %zu \n", feat_map.size());//debug
-  printf("plane_map size: %zu \n", plane_map.size());//debug
-  if (feat_map.size() <= 0) return;//*这里的feat_map是VIO中的特征地图，第一帧为0，退出
+  // printf("VIO feat_map size: %zu \n", feat_map.size());//debug
+  // printf("VIO plane_map size: %zu \n", plane_map.size());//debug
+  if (feat_map.size() <= 0) return;//*这里的feat_map是VIOManager中的视觉稀疏地图，第一帧为0，退出
   double ts0 = omp_get_wtime();
 
   // pg_down->reserve(feat_map.size());
@@ -817,7 +818,7 @@ void VIOManager::generateVisualMapPoints(cv::Mat img, vector<pointWithVar> &pg)/
 
     if (new_frame_->cam_->isInFrame(pc.cast<int>(), border)) // 20px is the patch size in the matcher
     {
-      int index = static_cast<int>(pc[1] / grid_size) * grid_n_width + static_cast<int>(pc[0] / grid_size);
+      int index = static_cast<int>(pc[1] / grid_size) * grid_n_width + static_cast<int>(pc[0] / grid_size);//图像网格索引
 
       if (grid_num[index] != TYPE_MAP)//网格单元中没有被选为地图点的点，更新地图点
       {
@@ -863,7 +864,7 @@ void VIOManager::generateVisualMapPoints(cv::Mat img, vector<pointWithVar> &pg)/
   {
     if (grid_num[i] == TYPE_POINTCLOUD) // && (scan_value[i]>=50))  //* 处理标记为点云点的点
     {
-      pointWithVar pt_var = append_voxel_points[i];
+      pointWithVar pt_var = append_voxel_points[i];//上一步选中的点
       V3D pt = pt_var.point_w;
 
       V3D norm_vec(new_frame_->T_f_w_.rotation_matrix() * pt_var.normal);//将点的法向量转换到当前帧的坐标系中
@@ -876,7 +877,7 @@ void VIOManager::generateVisualMapPoints(cv::Mat img, vector<pointWithVar> &pg)/
       float *patch = new float[patch_size_total];//patch_size_total是8x8图像块的像素总数
       getImagePatch(img, pc, patch, 0);//todo 从输入图像img中提取一个以pc为中心的图像块，并将其存储在patch_tmp数组中
 
-      VisualPoint *pt_new = new VisualPoint(pt);
+      VisualPoint *pt_new = new VisualPoint(pt);//视觉点
 
       Vector3d f = cam->cam2world(pc);//将pc从图像平面转换到相机坐标系下的三维方向向量
       Feature *ftr_new = new Feature(pt_new, patch, pc, f, new_frame_->T_f_w_, 0);//特征点的封装：封装了视觉地图点、图像块、像素坐标、方向向量、位姿
@@ -1697,7 +1698,7 @@ void VIOManager::updateFrameState(StatesGroup state)//更新相机状态
   V3D Pwi(state.pos_end);//imu到world的平移向量
   Rcw = Rci * Rwi.transpose();//世界坐标系到相机坐标系的旋转矩阵
   Pcw = -Rci * Rwi.transpose() * Pwi + Pci;//世界坐标系到相机坐标系的平移向量
-  new_frame_->T_f_w_ = SE3(Rcw, Pcw);//相机到世界的变换矩阵
+  new_frame_->T_f_w_ = SE3(Rcw, Pcw);//世界到相机的变换矩阵
 }
 
 void VIOManager::plotTrackedPoints()
@@ -1797,7 +1798,7 @@ void VIOManager::processFrame(cv::Mat &img, vector<pointWithVar> &pg, const unor
     cv::resize(img, img, cv::Size(img.cols * image_resize_factor, img.rows * image_resize_factor), 0, 0, CV_INTER_LINEAR);
   }
   // printf("img.cols: %d,img.rows: %d,\n", img.cols, img.rows);
-  img_rgb = img.clone();//用于colmap输出
+  img_rgb = img.clone();//用于colmap输出与点云上色
   img_cp = img.clone();//用于绘制跟踪点
   // img_test = img.clone();
 
@@ -1818,7 +1819,7 @@ void VIOManager::processFrame(cv::Mat &img, vector<pointWithVar> &pg, const unor
 
   double t3 = omp_get_wtime();
 
-  generateVisualMapPoints(img, pg);//todo 生成视觉地图点
+  generateVisualMapPoints(img, pg);//todo 生成视觉地图点 feat_map
 
   double t4 = omp_get_wtime();
   

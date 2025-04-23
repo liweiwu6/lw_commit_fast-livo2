@@ -28,12 +28,12 @@ class Frame : boost::noncopyable
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  static int frame_counter_; //!< Counts the number of created frames. Used to set the unique id.
+  static int frame_counter_; //!< Counts the number of created frames. Used to set the unique id. 
   int id_;                   //!< Unique id of the frame.
   vk::AbstractCamera *cam_;  //!< Camera model.
   SE3 T_f_w_;                //!< Transform (f)rame from (w)orld.
   SE3 T_f_w_prior_;          //!< Transform (f)rame from (w)orld provided by the IMU prior.
-  cv::Mat img_;              //!< Image of the frame.
+  cv::Mat img_;              //!< Image of the frame. 
   Features fts_;             //!< List of features in the image.
 
   Frame(vk::AbstractCamera *cam, const cv::Mat &img);
