@@ -445,7 +445,7 @@ void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &
     VOXEL_LOCATION position = iter.first;
 
     // double t4 = omp_get_wtime();
-    auto corre_voxel = feat_map.find(position);//* 在feat_map中查找sub_feat_map的体素网格 这里的feat_map可能是在更新视觉地图点时更新的
+    auto corre_voxel = feat_map.find(position);//* 在feat_map中查找sub_feat_map的体素网格 这里的feat_map是在更新视觉地图点时更新的
     // double t5 = omp_get_wtime();
 
     if (corre_voxel != feat_map.end())//找到
@@ -645,7 +645,7 @@ void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &
       // t_2 += omp_get_wtime() - t_1;
 
       // t_1 = omp_get_wtime();
-      Feature *ref_ftr;
+      Feature *ref_ftr;//参考图像块
       std::vector<float> patch_wrap(warp_len);//todo  好像是创建存放图像块的缓冲区
 
       int search_level;
@@ -655,15 +655,15 @@ void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &
 
       if (normal_en)//法向量标志位 默认为true //todo 选择该点的参考图像块
       {
-        float phtometric_errors_min = std::numeric_limits<float>::max();
+        float phtometric_errors_min = std::numeric_limits<float>::max();//将误差设置为最大值
 
-        if (pt->obs_.size() == 1)//只有一个观察点，直接将该点设置为参考补丁
+        if (pt->obs_.size() == 1)//只有一个观察点，直接将该点设置为参考图像块
         {
           ref_ftr = *pt->obs_.begin();
           pt->ref_patch = ref_ftr;//更新参考图像块
           pt->has_ref_patch_ = true;//标志位
         }
-        else if (!pt->has_ref_patch_)//有多个参考点，且没有设置参考补丁
+        else if (!pt->has_ref_patch_)//有多个图像块，且没有设置参考图像块
         {
           for (auto it = pt->obs_.begin(), ite = pt->obs_.end(); it != ite; ++it)//todo 按照光度误差来选择参考图像块
           {
@@ -703,14 +703,14 @@ void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &
       {
         V3D norm_vec = (ref_ftr->T_f_w_.rotation_matrix() * pt->normal_).normalized();//计算法向量，参考帧坐标系
         
-        V3D pf(ref_ftr->T_f_w_ * pt->pos_);//将点从世界坐标系转到参考帧坐标系
+        V3D pf(ref_ftr->T_f_w_ * pt->pos_);//将点从世界坐标系转到当前帧坐标系
         // V3D pf_norm = pf.normalized();
         
         // double cos_theta = norm_vec.dot(pf_norm);
         // if(cos_theta < 0) norm_vec = -norm_vec;
         // if (abs(cos_theta) < 0.08) continue; // 0.5 60 degree 0.34 70 degree 0.17 80 degree 0.08 85 degree
 
-        SE3 T_cur_ref = new_frame_->T_f_w_ * ref_ftr->T_f_w_.inverse();//当前帧到参考帧的位姿变换矩阵
+        SE3 T_cur_ref = new_frame_->T_f_w_ * ref_ftr->T_f_w_.inverse();//参考帧到当前帧的位姿变换矩阵
         //                             px_是金字塔级别0上的像素坐标
         getWarpMatrixAffineHomography(*cam, ref_ftr->px_, pf, norm_vec, T_cur_ref, 0, A_cur_ref_zero);//参考帧到当前帧的仿射变换矩阵A_cur_ref_zero，这个矩阵描述了图像块在两帧之间的几何变换关系
 
@@ -738,9 +738,9 @@ void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &
       // t_4 += omp_get_wtime() - t_1;
 
       // t_1 = omp_get_wtime();
-      // * 通过仿射变换将参考点中的图像块（patch）投影到当前帧的图像坐标系中，并生成一个变换后的图像块 //
+      
       for (int pyramid_level = 0; pyramid_level <= patch_pyrimid_level - 1; pyramid_level++)//todo
-      {
+      {// * 通过仿射变换将参考点中的图像块（patch）投影到当前帧的图像坐标系中，并生成一个变换后的图像块 //
         warpAffine(A_cur_ref_zero, ref_ftr->img_, ref_ftr->px_, ref_ftr->level_, search_level, pyramid_level, patch_size_half, patch_wrap.data());//todo
       }
       // * 用于从输入图像img中提取一个以像素坐标pc为中心的图像块（patch），并将结果存储到patch_buffer中 //
@@ -1805,7 +1805,7 @@ void VIOManager::processFrame(cv::Mat &img, vector<pointWithVar> &pg, const unor
   if (img.channels() == 3) cv::cvtColor(img, img, CV_BGR2GRAY);//转换为灰度图
 
   new_frame_.reset(new Frame(cam, img));//构建新的当前帧
-  updateFrameState(*state);//更新了一些坐标变换
+  updateFrameState(*state);//* 更新了一些坐标变换
   
   resetGrid();//重置网格
 
