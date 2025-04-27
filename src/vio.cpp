@@ -147,10 +147,10 @@ void VIOManager::initializeVIO()//初始化VIO,摄像头相关参数
   update_flag.resize(length);
   scan_value.resize(length);
 
-  patch_size_total = patch_size * patch_size;//8*8图像块
+  patch_size_total = patch_size * patch_size;//8*8图像块 一个图像块的像素总数
   patch_size_half = static_cast<int>(patch_size / 2);
   patch_buffer.resize(patch_size_total);
-  warp_len = patch_size_total * patch_pyrimid_level;//??
+  warp_len = patch_size_total * patch_pyrimid_level;//所有层的像素总数
   border = (patch_size_half + 1) * (1 << patch_pyrimid_level);//定义图像的边缘保护区域大小
 
   retrieve_voxel_points.reserve(length);
@@ -224,7 +224,7 @@ void VIOManager::getImagePatch(cv::Mat img, V2D pc, float *patch_tmp, int level)
   }
 }
 
-void VIOManager::insertPointIntoVoxelMap(VisualPoint *pt_new)//将点插入到体素地图中
+void VIOManager::insertPointIntoVoxelMap(VisualPoint *pt_new)//将点插入到视觉稀疏地图中
 {
   V3D pt_w(pt_new->pos_[0], pt_new->pos_[1], pt_new->pos_[2]);
   double voxel_size = 0.5;
@@ -235,7 +235,7 @@ void VIOManager::insertPointIntoVoxelMap(VisualPoint *pt_new)//将点插入到�
     if (loc_xyz[j] < 0) { loc_xyz[j] -= 1.0; }
   }
   VOXEL_LOCATION position((int64_t)loc_xyz[0], (int64_t)loc_xyz[1], (int64_t)loc_xyz[2]);
-  auto iter = feat_map.find(position);//VIO中的体素地图
+  auto iter = feat_map.find(position);
   if (iter != feat_map.end())
   {
     iter->second->voxel_points.push_back(pt_new);
@@ -640,13 +640,13 @@ void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &
         }
         if (depth_continous) break;
       }
-      if (depth_continous) continue;//?这里应该是去除深度不连续的点  没仔细看
+      if (depth_continous) continue;//这里应该是去除深度不连续的点，论文中有提到
 
       // t_2 += omp_get_wtime() - t_1;
 
       // t_1 = omp_get_wtime();
       Feature *ref_ftr;//参考图像块
-      std::vector<float> patch_wrap(warp_len);//todo  好像是创建存放图像块的缓冲区
+      std::vector<float> patch_wrap(warp_len);// 存放所有层图像块的像素
 
       int search_level;
       Matrix2d A_cur_ref_zero;
@@ -665,7 +665,7 @@ void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &
         }
         else if (!pt->has_ref_patch_)//有多个图像块，且没有设置参考图像块
         {
-          for (auto it = pt->obs_.begin(), ite = pt->obs_.end(); it != ite; ++it)//todo 按照光度误差来选择参考图像块
+          for (auto it = pt->obs_.begin(), ite = pt->obs_.end(); it != ite; ++it)//todo 按照光度误差来选择参考图像块 从所有的图像块中，选出与另一个最相似的作为参考图像块 （可以避免选择到动态物体）
           {
             Feature *ref_patch_temp = *it;
             float *patch_temp = ref_patch_temp->patch_;
@@ -753,7 +753,7 @@ void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &
                  (ref_ftr->inv_expo_time_ * patch_wrap[ind] - state->inv_expo_time * patch_buffer[ind]);
       }
 
-      if (ncc_en)//todo默认关闭，没看(计算两个图像块（patch）之间归一化互相关（Normalized Cross-Correlation, NCC）的函数) 这里应该是作者未完成的工作（在论文中提到了）
+      if (ncc_en)//todo默认关闭，没看(计算两个图像块（patch）之间归一化互相关（Normalized Cross-Correlation, NCC）的函数)，功能被作者注释
       {
         double ncc = calculateNCC(patch_wrap.data(), patch_buffer.data(), patch_size_total);
         if (ncc < ncc_thre)
@@ -766,10 +766,10 @@ void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &
       if (error > outlier_threshold * patch_size_total) continue;//?选取图像块的阈值
 
       visual_submap->voxel_points.push_back(pt);//pt是feat_map中的点
-      visual_submap->propa_errors.push_back(error);
+      visual_submap->propa_errors.push_back(error);//预测误差？用于绘制跟踪点时判断是否为内点
       visual_submap->search_levels.push_back(search_level);
-      visual_submap->errors.push_back(error);
-      visual_submap->warp_patch.push_back(patch_wrap);
+      visual_submap->errors.push_back(error);//这个误差在后面的最小化光度误差会更新
+      visual_submap->warp_patch.push_back(patch_wrap);//参考帧图像块的灰度值，用于计算光度误差
       visual_submap->inv_expo_list.push_back(ref_ftr->inv_expo_time_);//逆曝光时间
 
       // t_5 += omp_get_wtime() - t_1;
@@ -834,7 +834,7 @@ void VIOManager::generateVisualMapPoints(cv::Mat img, vector<pointWithVar> &pg)/
     }
   }
 
-  for (int j = 0; j < visual_submap->add_from_voxel_map.size(); j++)//todo这里第一次VIO应该不会执行（visual_submap为空） 好像跟光线投射有关，但是默认是关闭的
+  for (int j = 0; j < visual_submap->add_from_voxel_map.size(); j++)//todo 这里第一次VIO应该不会执行（visual_submap为空） 好像跟光线投射有关，但是默认是关闭的
   {
     V3D pt = visual_submap->add_from_voxel_map[j].point_w;
     V2D pc(new_frame_->w2c(pt));
@@ -889,12 +889,12 @@ void VIOManager::generateVisualMapPoints(cv::Mat img, vector<pointWithVar> &pg)/
       pt_new->covariance_ = pt_var.var;//协方差矩阵
       pt_new->is_normal_initialized_ = true;//!法向量初始化成功
 
-      if (cos_theta < 0) { pt_new->normal_ = -pt_var.normal; }
+      if (cos_theta < 0) { pt_new->normal_ = -pt_var.normal; }//将当前帧的法向量赋值
       else { pt_new->normal_ = pt_var.normal; }
       
       pt_new->previous_normal_ = pt_new->normal_;
 
-      insertPointIntoVoxelMap(pt_new);//todo 插入体素地图feat_map,这个feat_map感觉像是VIO里面独立的一个，但是数量又对不上，待研究
+      insertPointIntoVoxelMap(pt_new);//todo 插入体素地图feat_map
       add += 1;
       // map_cur_frame.push_back(pt_new);
     }
@@ -918,7 +918,7 @@ void VIOManager::updateVisualMapPoints(cv::Mat img)//更新视觉地图点
   {
     VisualPoint *pt = visual_submap->voxel_points[i];
     if (pt == nullptr) continue;
-    if (pt->is_converged_)//点是否收敛
+    if (pt->is_converged_)//点是否收敛，在更新参考图像块时判断
     { 
       pt->deleteNonRefPatchFeatures();//删除不是参考补丁的特征点
       continue;
@@ -932,9 +932,9 @@ void VIOManager::updateVisualMapPoints(cv::Mat img)//更新视觉地图点
     // TODO: condition: distance and view_angle
     // Step 1: time
     Feature *last_feature = pt->obs_.back();
-    // if(new_frame_->id_ >= last_feature->id_ + 10) add_flag = true; // 10
+    // if(new_frame_->id_ >= last_feature->id_ + 10) add_flag = true; // 10  这里在论文里面提到超过20帧进行更新，但是没有启用
 
-    // Step 2: delta_pose
+    // Step 2: delta_pose 论文中似乎未提到
     SE3 pose_ref = last_feature->T_f_w_;//参考帧位姿
     SE3 delta_pose = pose_ref * pose_cur.inverse();//两帧之间的相对变换
     double delta_p = delta_pose.translation().norm();//平移向量的变化量
@@ -963,7 +963,7 @@ void VIOManager::updateVisualMapPoints(cv::Mat img)//更新视觉地图点
       ftr_new->img_ = img;
       ftr_new->id_ = new_frame_->id_;
       ftr_new->inv_expo_time_ = state->inv_expo_time;
-      pt->addFrameRef(ftr_new);//添加观测点
+      pt->addFrameRef(ftr_new);//添加图像块
     }
   }
   printf("[ VIO ] Update %d points in visual submap\n", update_num);
@@ -978,9 +978,9 @@ void VIOManager::updateReferencePatch(const unordered_map<VOXEL_LOCATION, VoxelO
     VisualPoint *pt = visual_submap->voxel_points[i];
 
     if (!pt->is_normal_initialized_) continue;//法线未初始化，跳过
-    if (pt->is_converged_) continue;//该点收敛，跳过
+    if (pt->is_converged_) continue;//该点收敛，不需要更新，跳过
     if (pt->obs_.size() <= 5) continue;//观测点小于5，跳过
-    if (update_flag[i] == 0) continue;//在上一步没有更新，跳过
+    if (update_flag[i] == 0) continue;//?在上一步没有更新，跳过
 
     const V3D &p_w = pt->pos_;
     float loc_xyz[3];
@@ -1019,14 +1019,14 @@ void VIOManager::updateReferencePatch(const unordered_map<VOXEL_LOCATION, VoxelO
             // V3D norm_vec_ref(pt->ref_patch->T_f_w_.rotation_matrix() *
             // plane.normal); double cos_ref = pf_ref.dot(norm_vec_ref);
             //* 代码会根据当前点的历史法向量 previous_normal_ 和当前平面法向量 plane.normal_ 的夹角，决定是否需要翻转法向量方向，并用新的法向量更新点的属性
-            if (pt->previous_normal_.dot(plane.normal_) < 0) { pt->normal_ = -plane.normal_; }
+            if (pt->previous_normal_.dot(plane.normal_) < 0) { pt->normal_ = -plane.normal_; }//* 用平面法向量来更新点的法向量
             else { pt->normal_ = plane.normal_; }
 
             double normal_update = (pt->normal_ - pt->previous_normal_).norm();//法向量的变化量
 
             pt->previous_normal_ = pt->normal_;
             //最后，如果法向量变化量非常小（小于 0.0001），且该点被观测次数较多（pt->obs_.size() > 10），则认为该点的法向量已经收敛，设置 is_converged_ 标志为真
-            if (normal_update < 0.0001 && pt->obs_.size() > 10)
+            if (normal_update < 0.0001 && pt->obs_.size() > 10)//；变化量较小，且被观测次数较多
             {
               pt->is_converged_ = true;
               // visual_converged_point.push_back(pt);
@@ -1094,7 +1094,7 @@ void VIOManager::updateReferencePatch(const unordered_map<VOXEL_LOCATION, VoxelO
       if (score > score_max)//保存最大得分
       {
         score_max = score;
-        pt->ref_patch = ref_patch_temp;
+        pt->ref_patch = ref_patch_temp;//选择最大得分的参考图像块
         pt->has_ref_patch_ = true;
       }
     }
@@ -1538,14 +1538,14 @@ void VIOManager::updateState(cv::Mat img, int level)//todo VIO的EKF更新
   H_sub.resize(H_DIM, 7);//雅可比矩阵
   H_sub.setZero();
 
-  for (int iteration = 0; iteration < max_iterations; iteration++)//开始迭代求解
+  for (int iteration = 0; iteration < max_iterations; iteration++)//* 开始迭代求解 最小化光度误差
   {
     double t1 = omp_get_wtime();
 
     M3D Rwi(state->rot_end);//imu->world
-    V3D Pwi(state->pos_end);
+    V3D Pwi(state->pos_end);//imu->world
     Rcw = Rci * Rwi.transpose();//world->camera
-    Pcw = -Rci * Rwi.transpose() * Pwi + Pci;
+    Pcw = -Rci * Rwi.transpose() * Pwi + Pci;//world->camera
     Jdp_dt = Rci * Rwi.transpose();//雅可比矩阵
     
     float error = 0.0;
@@ -1623,7 +1623,7 @@ void VIOManager::updateState(cv::Mat img, int level)//todo VIO的EKF更新
 
           double cur_value =
               w_ref_tl * img_ptr[0] + w_ref_tr * img_ptr[scale] + w_ref_bl * img_ptr[scale * width] + w_ref_br * img_ptr[scale * width + scale];//当前点的值
-          double res = state->inv_expo_time * cur_value - inv_ref_expo * P[patch_size_total * level + x * patch_size + y];//残差
+          double res = state->inv_expo_time * cur_value - inv_ref_expo * P[patch_size_total * level + x * patch_size + y];//!光度误差
 
           z(i * patch_size_total + x * patch_size + y) = res;//保存到观测向量
 
@@ -1659,23 +1659,24 @@ void VIOManager::updateState(cv::Mat img, int level)//todo VIO的EKF更新
       // vec = (*state_propagat) - (*state); G = K*H;
       // (*state) += (-K*z + vec - G*vec);
       //todo EFK更新
-      auto &&H_sub_T = H_sub.transpose();//观测模型转置
-      H_T_H.setZero();
-      G.setZero();
-      H_T_H.block<7, 7>(0, 0) = H_sub_T * H_sub;
-      MD(DIM_STATE, DIM_STATE) &&K_1 = (H_T_H + (state->cov / img_point_cov).inverse()).inverse();
-      auto &&HTz = H_sub_T * z;
+      auto &&H_sub_T = H_sub.transpose();//H_sub是观测雅可比矩阵，H_sub_T * H_sub 得到观测信息矩阵
+      H_T_H.setZero();//H_T_H是信息矩阵的一个子块
+      G.setZero();//K * H
+      H_T_H.block<7, 7>(0, 0) = H_sub_T * H_sub;//观测信息矩阵
+      MD(DIM_STATE, DIM_STATE) &&K_1 = (H_T_H + (state->cov / img_point_cov).inverse()).inverse();//state->cov是当前状态协方差，img_point_cov是观测噪声协方差，K_1近似于卡尔曼增益的中间量（实际增益还要乘以观测雅可比）
+      auto &&HTz = H_sub_T * z;//观测残差在观测空间的投影
       // K = K_1.block<DIM_STATE,6>(0,0) * H_sub_T;
-      auto vec = (*state_propagat) - (*state);
-      G.block<DIM_STATE, 7>(0, 0) = K_1.block<DIM_STATE, 7>(0, 0) * H_T_H.block<7, 7>(0, 0);//G = K * H
+      auto vec = (*state_propagat) - (*state);//预测状态与当前状态的差值（先验-后验）
+      G.block<DIM_STATE, 7>(0, 0) = K_1.block<DIM_STATE, 7>(0, 0) * H_T_H.block<7, 7>(0, 0);//G = K * H 卡尔曼增益与观测雅可比的乘积
       MD(DIM_STATE, 1)
       solution = -K_1.block<DIM_STATE, 7>(0, 0) * HTz + vec - G.block<DIM_STATE, 7>(0, 0) * vec.block<7, 1>(0, 0);
+      //第一项：观测残差的校正（卡尔曼增益作用下的观测创新），第二项：先验-后验状态差，第三项：对先验-后验差的进一步修正（G*vec） 这三项合起来就是ESKF的误差状态校正量
 
       (*state) += solution;//增量更新
-      auto &&rot_add = solution.block<3, 1>(0, 0);
-      auto &&t_add = solution.block<3, 1>(3, 0);
+      auto &&rot_add = solution.block<3, 1>(0, 0);//旋转增量
+      auto &&t_add = solution.block<3, 1>(3, 0);//平移增量
 
-      auto &&expo_add = solution.block<1, 1>(6, 0);
+      auto &&expo_add = solution.block<1, 1>(6, 0);//曝光增量
       // if ((rot_add.norm() * 57.3f < 0.001f) && (t_add.norm() * 100.0f < 0.001f) && (expo_add.norm() < 0.001f)) EKF_end = true;
       if ((rot_add.norm() * 57.3f < 0.001f) && (t_add.norm() * 100.0f < 0.001f))  EKF_end = true;//todo 旋转和位移增量都小于阈值，结束更新
     }
@@ -1701,7 +1702,7 @@ void VIOManager::updateFrameState(StatesGroup state)//更新相机状态
   new_frame_->T_f_w_ = SE3(Rcw, Pcw);//世界到相机的变换矩阵
 }
 
-void VIOManager::plotTrackedPoints()
+void VIOManager::plotTrackedPoints()//绘制追踪点
 {
   int total_points = visual_submap->voxel_points.size();//第一帧不会处理
   if (total_points == 0) return;

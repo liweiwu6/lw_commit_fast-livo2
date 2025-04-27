@@ -94,7 +94,7 @@ uav:
 
 publish:
   dense_map_en: true #稠密地图
-  pub_effect_point_en: false #有效点云
+  pub_effect_point_en: true #有效点云
   pub_plane_en: false #平面
   pub_scan_num: 1 #发布扫描线数
   blind_rgb_points: 0.0 #盲区RGB点数

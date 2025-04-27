@@ -58,15 +58,15 @@ void LIVMapper::readParameters(ros::NodeHandle &nh)
 
   nh.param<bool>("vio/normal_en", normal_en, true);
   nh.param<bool>("vio/inverse_composition_en", inverse_composition_en, false);
-  nh.param<int>("vio/max_iterations", max_iterations, 5);
+  nh.param<int>("vio/max_iterations", max_iterations, 5);//最大迭代次数
   nh.param<double>("vio/img_point_cov", IMG_POINT_COV, 100);
-  nh.param<bool>("vio/raycast_en", raycast_en, false);
-  nh.param<bool>("vio/exposure_estimate_en", exposure_estimate_en, true);
+  nh.param<bool>("vio/raycast_en", raycast_en, false);//光线投射
+  nh.param<bool>("vio/exposure_estimate_en", exposure_estimate_en, true);//曝光估计
   nh.param<double>("vio/inv_expo_cov", inv_expo_cov, 0.2);
   nh.param<int>("vio/grid_size", grid_size, 5);//网格大小
   nh.param<int>("vio/grid_n_height", grid_n_height, 17);//网格的行数，当grid_size<10,会进行一些处理
-  nh.param<int>("vio/patch_pyrimid_level", patch_pyrimid_level, 3);
-  nh.param<int>("vio/patch_size", patch_size, 8);
+  nh.param<int>("vio/patch_pyrimid_level", patch_pyrimid_level, 3);//* 图像金字塔层数，论文中为3，代码设置为4
+  nh.param<int>("vio/patch_size", patch_size, 8);//图像块大小
   nh.param<double>("vio/outlier_threshold", outlier_threshold, 1000);
 
   nh.param<double>("time_offset/exposure_time_init", exposure_time_init, 0.0);
@@ -85,11 +85,11 @@ void LIVMapper::readParameters(ros::NodeHandle &nh)
   nh.param<bool>("imu/gravity_est_en", gravity_est_en, true);
   nh.param<bool>("imu/ba_bg_est_en", ba_bg_est_en, true);
 
-  nh.param<double>("preprocess/blind", p_pre->blind, 0.01);//todo
+  nh.param<double>("preprocess/blind", p_pre->blind, 0.01);
   nh.param<double>("preprocess/filter_size_surf", filter_size_surf_min, 0.5);
   nh.param<int>("preprocess/lidar_type", p_pre->lidar_type, AVIA);
   nh.param<int>("preprocess/scan_line", p_pre->N_SCANS, 6);
-  nh.param<int>("preprocess/point_filter_num", p_pre->point_filter_num, 3);
+  nh.param<int>("preprocess/point_filter_num", p_pre->point_filter_num, 3);//输入点云降采样
   nh.param<bool>("preprocess/feature_extract_enabled", p_pre->feature_enabled, false);
 
   nh.param<int>("pcd_save/interval", pcd_save_interval, -1);
@@ -108,7 +108,7 @@ void LIVMapper::readParameters(ros::NodeHandle &nh)
   nh.param<bool>("publish/pub_effect_point_en", pub_effect_point_en, false);
   nh.param<bool>("publish/dense_map_en", dense_map_en, false);
 
-  p_pre->blind_sqr = p_pre->blind * p_pre->blind;//todo
+  p_pre->blind_sqr = p_pre->blind * p_pre->blind;//去除近距离激光点的阈值
 }
 
 void LIVMapper::initializeComponents() 
@@ -209,7 +209,7 @@ void LIVMapper::initializeSubscribersAndPublishers(ros::NodeHandle &nh, image_tr
   pubImage = it.advertise("/rgb_img", 1);//发布rviz中显示的图像
   pubImuPropOdom = nh.advertise<nav_msgs::Odometry>("/LIVO2/imu_propagate", 10000);
   imu_prop_timer = nh.createTimer(ros::Duration(0.004), &LIVMapper::imu_prop_callback, this);
-  voxelmap_manager->voxel_map_pub_= nh.advertise<visualization_msgs::MarkerArray>("/planes", 10000);
+  voxelmap_manager->voxel_map_pub_= nh.advertise<visualization_msgs::MarkerArray>("/planes", 10000);//发布体素地图
 }
 
 void LIVMapper::handleFirstFrame() 
@@ -366,7 +366,7 @@ void LIVMapper::handleLIO()
 
   voxelmap_manager->StateEstimation(state_propagat);//todo 状态估计
   _state = voxelmap_manager->state_;
-  _pv_list = voxelmap_manager->pv_list_;//好像跟下面地图更新重复，这里感觉多余
+  _pv_list = voxelmap_manager->pv_list_;//这里的pv_list_的点是带有法向量的
 
   double t2 = omp_get_wtime();
 // * ///////////////////////////////////////////////////////////
@@ -378,7 +378,7 @@ void LIVMapper::handleLIO()
     state_update_flg = true;
   }
 
-  if (pose_output_en) //输出位姿，写入外部文件，用于EVO评估
+  if (pose_output_en) //* 输出位姿，写入外部文件，用于EVO评估
   {
     static bool pos_opend = false;//静态变量，执行一次
     static int ocount = 0;
@@ -408,7 +408,7 @@ void LIVMapper::handleLIO()
   double t3 = omp_get_wtime();
 
   PointCloudXYZI::Ptr world_lidar(new PointCloudXYZI());//点云指针
-  transformLidar(_state.rot_end, _state.pos_end, feats_down_body, world_lidar);//点云转换坐标系 lidar->world
+  transformLidar(_state.rot_end, _state.pos_end, feats_down_body, world_lidar);//点云转换坐标系 lidar->world 使用优化后的位姿更新
   for (size_t i = 0; i < world_lidar->points.size(); i++)//遍历所有点云数据，计算协方差，将点与协方差保存到voxelmap_manager->pv_list_
   {
     voxelmap_manager->pv_list_[i].point_w << world_lidar->points[i].x, world_lidar->points[i].y, world_lidar->points[i].z;//将点云数据写入pv_list_
@@ -420,7 +420,7 @@ void LIVMapper::handleLIO()
   }
   voxelmap_manager->UpdateVoxelMap(voxelmap_manager->pv_list_);//todo 更新体素地图，输入参数是带有var的世界坐标系降采样点云数据
   std::cout << "[ LIO ] Update Voxel Map" << std::endl;
-  _pv_list = voxelmap_manager->pv_list_;//这里应该是给VIO使用
+  _pv_list = voxelmap_manager->pv_list_;//这里是给VIO使用
   
   double t4 = omp_get_wtime();//计算地图更新时间t4-t3
 // * ///////////////////////////地图更新完成///////////////////////////////
@@ -441,8 +441,8 @@ void LIVMapper::handleLIO()
 
   if (!img_en) publish_frame_world(pubLaserCloudFullRes, vio_manager);//未开启图像功能，直接发布点云 （在VIO中发布实时彩色点云与地图）
   if (pub_effect_point_en) publish_effect_world(pubLaserCloudEffect, voxelmap_manager->ptpl_list_);//发布有效点云 默认关闭
-  if (voxelmap_manager->config_setting_.is_pub_plane_map_) voxelmap_manager->pubVoxelMap();//默认关闭
-  publish_path(pubPath);//发布路径，pubPath是发布者
+  if (voxelmap_manager->config_setting_.is_pub_plane_map_) voxelmap_manager->pubVoxelMap();//发布LIO体素地图 默认关闭
+  publish_path(pubPath);//发布路径
   publish_mavros(mavros_pose_publisher);//发布mavros位姿
 
   frame_num++;
@@ -1212,7 +1212,7 @@ void LIVMapper::publish_frame_world(const ros::Publisher &pubLaserCloudFullRes, 
     }
     scan_wait_num++;
 
-    if ((pcl_wait_save->size() > 0 || pcl_wait_save_intensity->size() > 0) && pcd_save_interval > 0 && scan_wait_num >= pcd_save_interval)//这里是启用分段保存时的处理
+    if ((pcl_wait_save->size() > 0 || pcl_wait_save_intensity->size() > 0) && pcd_save_interval > 0 && scan_wait_num >= pcd_save_interval)//* 这里是启用分段保存时的处理
     {
       pcd_index++;
       string all_points_dir(string(string(ROOT_DIR) + "Log/PCD/") + to_string(pcd_index) + string(".pcd"));
